@@ -3,6 +3,7 @@ package dev.vitor.barbearia.ProjetoBarber.controllers;
 import dev.vitor.barbearia.ProjetoBarber.dtos.BarbeiroDTO;
 import dev.vitor.barbearia.ProjetoBarber.models.Barbeiro;
 import dev.vitor.barbearia.ProjetoBarber.services.BarbeiroService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,13 +32,13 @@ public class BarbeiroController {
     }
 
     @PostMapping
-    public ResponseEntity<Barbeiro> criar(@RequestBody BarbeiroDTO dto) {
+    public ResponseEntity<Barbeiro> criar(@RequestBody @Valid BarbeiroDTO dto) {
         Barbeiro barbeiro = barbeiroService.criar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(barbeiro);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Barbeiro> atualizar(@PathVariable Long id, @RequestBody BarbeiroDTO dto) {
+    public ResponseEntity<Barbeiro> atualizar(@PathVariable Long id, @RequestBody @Valid BarbeiroDTO dto) {
         Barbeiro barbeiro = barbeiroService.atualizar(id, dto);
         return ResponseEntity.ok(barbeiro);
     }

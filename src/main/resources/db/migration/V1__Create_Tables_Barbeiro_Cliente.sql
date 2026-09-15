@@ -2,12 +2,12 @@ CREATE TABLE barbeiro (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
     email VARCHAR(255),
-    telefone VARCHAR(255)
+    telefone VARCHAR(255)NOT NULL
 );
 
 CREATE TABLE cliente (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
-    telefone VARCHAR(255),
+    telefone VARCHAR(255),NOT NULL
     email VARCHAR(255)
 );

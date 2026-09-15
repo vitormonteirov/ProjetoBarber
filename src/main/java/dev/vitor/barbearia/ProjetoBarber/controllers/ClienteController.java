@@ -3,6 +3,7 @@ package dev.vitor.barbearia.ProjetoBarber.controllers;
 import dev.vitor.barbearia.ProjetoBarber.dtos.ClienteDTO;
 import dev.vitor.barbearia.ProjetoBarber.models.Cliente;
 import dev.vitor.barbearia.ProjetoBarber.services.ClienteService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,13 +32,13 @@ public class ClienteController {
     }
 
     @PostMapping
-    public ResponseEntity<Cliente> criar(@RequestBody ClienteDTO dto) {
+    public ResponseEntity<Cliente> criar(@RequestBody @Valid ClienteDTO dto) {
         Cliente cliente = clienteService.criar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(cliente);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @RequestBody ClienteDTO dto) {
+    public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteDTO dto) {
         Cliente cliente = clienteService.atualizar(id, dto);
         return ResponseEntity.ok(cliente);
     }
