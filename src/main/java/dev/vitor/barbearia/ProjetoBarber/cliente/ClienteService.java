@@ -1,8 +1,5 @@
-package dev.vitor.barbearia.ProjetoBarber.services;
+package dev.vitor.barbearia.ProjetoBarber.cliente;
 
-import dev.vitor.barbearia.ProjetoBarber.dtos.ClienteDTO;
-import dev.vitor.barbearia.ProjetoBarber.models.Cliente;
-import dev.vitor.barbearia.ProjetoBarber.repositories.ClienteRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,13 +13,8 @@ public class ClienteService {
     @Autowired
     private ClienteRepository clienteRepository;
 
-    public Page<Cliente> listarTodos(Pageable pageable) {
-        return clienteRepository.findAll(pageable);
-    }
-
-    public Optional<Cliente> buscarPorId(Long id) {
-        return clienteRepository.findById(id);
-    }
+    public Page<Cliente> listarTodos(Pageable pageable) { return clienteRepository.findAll(pageable); }
+    public Optional<Cliente> buscarPorId(Long id) { return clienteRepository.findById(id); }
 
     public Cliente criar(ClienteDTO dto) {
         Cliente cliente = new Cliente(null, dto.nome(), dto.telefone(), dto.email());
@@ -39,10 +31,7 @@ public class ClienteService {
     }
 
     public void excluir(Long id) {
-        if(clienteRepository.existsById(id)){
-            clienteRepository.deleteById(id);
-        } else {
-            throw new RuntimeException("Cliente não encontrado com ID: " + id);
-        }
+        if(clienteRepository.existsById(id)){ clienteRepository.deleteById(id); } 
+        else { throw new RuntimeException("Cliente não encontrado com ID: " + id); }
     }
 }

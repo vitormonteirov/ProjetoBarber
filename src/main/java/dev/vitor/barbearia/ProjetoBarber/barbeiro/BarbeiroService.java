@@ -1,8 +1,5 @@
-package dev.vitor.barbearia.ProjetoBarber.services;
+package dev.vitor.barbearia.ProjetoBarber.barbeiro;
 
-import dev.vitor.barbearia.ProjetoBarber.dtos.BarbeiroDTO;
-import dev.vitor.barbearia.ProjetoBarber.models.Barbeiro;
-import dev.vitor.barbearia.ProjetoBarber.repositories.BarbeiroRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,13 +13,8 @@ public class BarbeiroService {
     @Autowired
     private BarbeiroRepository barbeiroRepository;
 
-    public Page<Barbeiro> listarTodos(Pageable pageable) {
-        return barbeiroRepository.findAll(pageable);
-    }
-
-    public Optional<Barbeiro> buscarPorId(Long id) {
-        return barbeiroRepository.findById(id);
-    }
+    public Page<Barbeiro> listarTodos(Pageable pageable) { return barbeiroRepository.findAll(pageable); }
+    public Optional<Barbeiro> buscarPorId(Long id) { return barbeiroRepository.findById(id); }
 
     public Barbeiro criar(BarbeiroDTO dto) {
         Barbeiro barbeiro = new Barbeiro(null, dto.nome(), dto.email(), dto.telefone());
@@ -39,10 +31,7 @@ public class BarbeiroService {
     }
 
     public void excluir(Long id) {
-        if(barbeiroRepository.existsById(id)){
-            barbeiroRepository.deleteById(id);
-        } else {
-            throw new RuntimeException("Barbeiro não encontrado com ID: " + id);
-        }
+        if(barbeiroRepository.existsById(id)){ barbeiroRepository.deleteById(id); } 
+        else { throw new RuntimeException("Barbeiro não encontrado com ID: " + id); }
     }
 }

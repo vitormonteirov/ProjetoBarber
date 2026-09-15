@@ -1,8 +1,5 @@
-package dev.vitor.barbearia.ProjetoBarber.controllers;
+package dev.vitor.barbearia.ProjetoBarber.cliente;
 
-import dev.vitor.barbearia.ProjetoBarber.dtos.ClienteDTO;
-import dev.vitor.barbearia.ProjetoBarber.models.Cliente;
-import dev.vitor.barbearia.ProjetoBarber.services.ClienteService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/clientes")
-public class ClienteController {
+class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
@@ -26,21 +23,17 @@ public class ClienteController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Cliente> buscarPorId(@PathVariable Long id) {
-        return clienteService.buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return clienteService.buscarPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public ResponseEntity<Cliente> criar(@RequestBody @Valid ClienteDTO dto) {
-        Cliente cliente = clienteService.criar(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(cliente);
+        return ResponseEntity.status(HttpStatus.CREATED).body(clienteService.criar(dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteDTO dto) {
-        Cliente cliente = clienteService.atualizar(id, dto);
-        return ResponseEntity.ok(cliente);
+        return ResponseEntity.ok(clienteService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")

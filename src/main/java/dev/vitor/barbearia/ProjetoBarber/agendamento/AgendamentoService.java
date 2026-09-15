@@ -1,13 +1,9 @@
-package dev.vitor.barbearia.ProjetoBarber.services;
+package dev.vitor.barbearia.ProjetoBarber.agendamento;
 
-import dev.vitor.barbearia.ProjetoBarber.dtos.AgendamentoDTO;
-import dev.vitor.barbearia.ProjetoBarber.models.Agendamento;
-import dev.vitor.barbearia.ProjetoBarber.models.Barbeiro;
-import dev.vitor.barbearia.ProjetoBarber.models.Cliente;
-import dev.vitor.barbearia.ProjetoBarber.models.StatusAgendamento;
-import dev.vitor.barbearia.ProjetoBarber.repositories.AgendamentoRepository;
-import dev.vitor.barbearia.ProjetoBarber.repositories.BarbeiroRepository;
-import dev.vitor.barbearia.ProjetoBarber.repositories.ClienteRepository;
+import dev.vitor.barbearia.ProjetoBarber.barbeiro.Barbeiro;
+import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroService;
+import dev.vitor.barbearia.ProjetoBarber.cliente.Cliente;
+import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,16 +12,16 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 @Service
-public class AgendamentoService {
+class AgendamentoService {
 
     @Autowired
     private AgendamentoRepository agendamentoRepository;
     
     @Autowired
-    private ClienteRepository clienteRepository;
+    private ClienteService clienteService;
     
     @Autowired
-    private BarbeiroRepository barbeiroRepository;
+    private BarbeiroService barbeiroService;
 
     public Page<Agendamento> listarTodos(Pageable pageable) {
         return agendamentoRepository.findAll(pageable);
@@ -51,10 +47,11 @@ public class AgendamentoService {
             throw new IllegalArgumentException("O barbeiro selecionado não está disponível neste horário.");
         }
 
-        Cliente cliente = clienteRepository.findById(dto.clienteId())
+        // Usando os Services das outras features para garantir o encapsulamento
+        Cliente cliente = clienteService.buscarPorId(dto.clienteId())
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado."));
                 
-        Barbeiro barbeiro = barbeiroRepository.findById(dto.barbeiroId())
+        Barbeiro barbeiro = barbeiroService.buscarPorId(dto.barbeiroId())
                 .orElseThrow(() -> new RuntimeException("Barbeiro não encontrado."));
 
         Agendamento agendamento = new Agendamento(null, cliente, barbeiro, dto.dataHora(), StatusAgendamento.AGENDADO);

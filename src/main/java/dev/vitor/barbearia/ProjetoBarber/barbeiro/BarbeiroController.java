@@ -1,8 +1,5 @@
-package dev.vitor.barbearia.ProjetoBarber.controllers;
+package dev.vitor.barbearia.ProjetoBarber.barbeiro;
 
-import dev.vitor.barbearia.ProjetoBarber.dtos.BarbeiroDTO;
-import dev.vitor.barbearia.ProjetoBarber.models.Barbeiro;
-import dev.vitor.barbearia.ProjetoBarber.services.BarbeiroService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/barbeiros")
-public class BarbeiroController {
+class BarbeiroController {
 
     @Autowired
     private BarbeiroService barbeiroService;
@@ -26,21 +23,17 @@ public class BarbeiroController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Barbeiro> buscarPorId(@PathVariable Long id) {
-        return barbeiroService.buscarPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return barbeiroService.buscarPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     public ResponseEntity<Barbeiro> criar(@RequestBody @Valid BarbeiroDTO dto) {
-        Barbeiro barbeiro = barbeiroService.criar(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(barbeiro);
+        return ResponseEntity.status(HttpStatus.CREATED).body(barbeiroService.criar(dto));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Barbeiro> atualizar(@PathVariable Long id, @RequestBody @Valid BarbeiroDTO dto) {
-        Barbeiro barbeiro = barbeiroService.atualizar(id, dto);
-        return ResponseEntity.ok(barbeiro);
+        return ResponseEntity.ok(barbeiroService.atualizar(id, dto));
     }
 
     @DeleteMapping("/{id}")

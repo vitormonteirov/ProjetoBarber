@@ -1,8 +1,5 @@
-package dev.vitor.barbearia.ProjetoBarber.controllers;
+package dev.vitor.barbearia.ProjetoBarber.agendamento;
 
-import dev.vitor.barbearia.ProjetoBarber.dtos.AgendamentoDTO;
-import dev.vitor.barbearia.ProjetoBarber.models.Agendamento;
-import dev.vitor.barbearia.ProjetoBarber.services.AgendamentoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/agendamentos")
-public class AgendamentoController {
+class AgendamentoController {
 
     @Autowired
     private AgendamentoService agendamentoService;
@@ -26,13 +23,11 @@ public class AgendamentoController {
 
     @PostMapping
     public ResponseEntity<Agendamento> agendar(@RequestBody @Valid AgendamentoDTO dto) {
-        Agendamento agendamento = agendamentoService.agendar(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(agendamento);
+        return ResponseEntity.status(HttpStatus.CREATED).body(agendamentoService.agendar(dto));
     }
 
     @PatchMapping("/{id}/cancelar")
     public ResponseEntity<Agendamento> cancelar(@PathVariable Long id) {
-        Agendamento cancelado = agendamentoService.cancelar(id);
-        return ResponseEntity.ok(cancelado);
+        return ResponseEntity.ok(agendamentoService.cancelar(id));
     }
 }

@@ -1,10 +1,11 @@
-package dev.vitor.barbearia.ProjetoBarber.models;
+package dev.vitor.barbearia.ProjetoBarber.agendamento;
 
+import dev.vitor.barbearia.ProjetoBarber.cliente.Cliente;
+import dev.vitor.barbearia.ProjetoBarber.barbeiro.Barbeiro;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -12,7 +13,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Agendamento {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -31,5 +31,4 @@ public class Agendamento {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusAgendamento status;
-
 }
