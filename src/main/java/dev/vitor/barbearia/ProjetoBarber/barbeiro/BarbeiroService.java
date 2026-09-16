@@ -13,15 +13,15 @@ public class BarbeiroService {
     @Autowired
     private BarbeiroRepository barbeiroRepository;
 
-    public Page<Barbeiro> listarTodos(Pageable pageable) { return barbeiroRepository.findAll(pageable); }
-    public Optional<Barbeiro> buscarPorId(Long id) { return barbeiroRepository.findById(id); }
+    public Page<BarbeiroModel> listarTodos(Pageable pageable) { return barbeiroRepository.findAll(pageable); }
+    public Optional<BarbeiroModel> buscarPorId(Long id) { return barbeiroRepository.findById(id); }
 
-    public Barbeiro criar(BarbeiroDTO dto) {
-        Barbeiro barbeiro = new Barbeiro(null, dto.nome(), dto.email(), dto.telefone());
+    public BarbeiroModel criar(BarbeiroDTO dto) {
+        BarbeiroModel barbeiro = new BarbeiroModel(null, dto.nome(), dto.email(), dto.telefone());
         return barbeiroRepository.save(barbeiro);
     }
 
-    public Barbeiro atualizar(Long id, BarbeiroDTO dto) {
+    public BarbeiroModel atualizar(Long id, BarbeiroDTO dto) {
         return barbeiroRepository.findById(id).map(barbeiro -> {
             barbeiro.setNome(dto.nome());
             barbeiro.setEmail(dto.email());

@@ -17,22 +17,22 @@ class ClienteController {
     private ClienteService clienteService;
 
     @GetMapping
-    public ResponseEntity<Page<Cliente>> listar(@PageableDefault(size = 10) Pageable pageable) {
+    public ResponseEntity<Page<ClienteModel>> listar(@PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(clienteService.listarTodos(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Cliente> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<ClienteModel> buscarPorId(@PathVariable Long id) {
         return clienteService.buscarPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Cliente> criar(@RequestBody @Valid ClienteDTO dto) {
+    public ResponseEntity<ClienteModel> criar(@RequestBody @Valid ClienteDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(clienteService.criar(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Cliente> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteDTO dto) {
+    public ResponseEntity<ClienteModel> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteDTO dto) {
         return ResponseEntity.ok(clienteService.atualizar(id, dto));
     }
 

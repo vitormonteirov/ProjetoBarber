@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 
 @Repository
-interface AgendamentoRepository extends JpaRepository<Agendamento, Long> {
+interface AgendamentoRepository extends JpaRepository<AgendamentoModel, Long> {
 
     boolean existsByBarbeiroIdAndDataHoraAndStatus(Long barbeiroId, LocalDateTime dataHora, StatusAgendamento status);
 

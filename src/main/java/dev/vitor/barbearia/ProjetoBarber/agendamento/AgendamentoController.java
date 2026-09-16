@@ -17,17 +17,17 @@ class AgendamentoController {
     private AgendamentoService agendamentoService;
 
     @GetMapping
-    public ResponseEntity<Page<Agendamento>> listar(@PageableDefault(size = 10) Pageable pageable) {
+    public ResponseEntity<Page<AgendamentoModel>> listar(@PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(agendamentoService.listarTodos(pageable));
     }
 
     @PostMapping
-    public ResponseEntity<Agendamento> agendar(@RequestBody @Valid AgendamentoDTO dto) {
+    public ResponseEntity<AgendamentoModel> agendar(@RequestBody @Valid AgendamentoDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(agendamentoService.agendar(dto));
     }
 
     @PatchMapping("/{id}/cancelar")
-    public ResponseEntity<Agendamento> cancelar(@PathVariable Long id) {
+    public ResponseEntity<AgendamentoModel> cancelar(@PathVariable Long id) {
         return ResponseEntity.ok(agendamentoService.cancelar(id));
     }
 }

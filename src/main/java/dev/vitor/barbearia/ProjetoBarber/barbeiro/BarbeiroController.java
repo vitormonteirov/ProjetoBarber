@@ -17,22 +17,22 @@ class BarbeiroController {
     private BarbeiroService barbeiroService;
 
     @GetMapping
-    public ResponseEntity<Page<Barbeiro>> listar(@PageableDefault(size = 10) Pageable pageable) {
+    public ResponseEntity<Page<BarbeiroModel>> listar(@PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(barbeiroService.listarTodos(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Barbeiro> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<BarbeiroModel> buscarPorId(@PathVariable Long id) {
         return barbeiroService.buscarPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<Barbeiro> criar(@RequestBody @Valid BarbeiroDTO dto) {
+    public ResponseEntity<BarbeiroModel> criar(@RequestBody @Valid BarbeiroDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(barbeiroService.criar(dto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Barbeiro> atualizar(@PathVariable Long id, @RequestBody @Valid BarbeiroDTO dto) {
+    public ResponseEntity<BarbeiroModel> atualizar(@PathVariable Long id, @RequestBody @Valid BarbeiroDTO dto) {
         return ResponseEntity.ok(barbeiroService.atualizar(id, dto));
     }
 

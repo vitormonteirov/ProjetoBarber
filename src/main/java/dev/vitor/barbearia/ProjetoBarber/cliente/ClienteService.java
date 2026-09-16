@@ -13,15 +13,15 @@ public class ClienteService {
     @Autowired
     private ClienteRepository clienteRepository;
 
-    public Page<Cliente> listarTodos(Pageable pageable) { return clienteRepository.findAll(pageable); }
-    public Optional<Cliente> buscarPorId(Long id) { return clienteRepository.findById(id); }
+    public Page<ClienteModel> listarTodos(Pageable pageable) { return clienteRepository.findAll(pageable); }
+    public Optional<ClienteModel> buscarPorId(Long id) { return clienteRepository.findById(id); }
 
-    public Cliente criar(ClienteDTO dto) {
-        Cliente cliente = new Cliente(null, dto.nome(), dto.telefone(), dto.email());
+    public ClienteModel criar(ClienteDTO dto) {
+        ClienteModel cliente = new ClienteModel(null, dto.nome(), dto.telefone(), dto.email());
         return clienteRepository.save(cliente);
     }
 
-    public Cliente atualizar(Long id, ClienteDTO dto) {
+    public ClienteModel atualizar(Long id, ClienteDTO dto) {
         return clienteRepository.findById(id).map(cliente -> {
             cliente.setNome(dto.nome());
             cliente.setTelefone(dto.telefone());

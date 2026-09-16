@@ -1,8 +1,8 @@
 package dev.vitor.barbearia.ProjetoBarber.agendamento;
 
-import dev.vitor.barbearia.ProjetoBarber.barbeiro.Barbeiro;
+import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroModel;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroService;
-import dev.vitor.barbearia.ProjetoBarber.cliente.Cliente;
+import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteModel;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -23,11 +23,11 @@ class AgendamentoService {
     @Autowired
     private BarbeiroService barbeiroService;
 
-    public Page<Agendamento> listarTodos(Pageable pageable) {
+    public Page<AgendamentoModel> listarTodos(Pageable pageable) {
         return agendamentoRepository.findAll(pageable);
     }
 
-    public Agendamento agendar(AgendamentoDTO dto) {
+    public AgendamentoModel agendar(AgendamentoDTO dto) {
         // Regra 1: Verificar limite de agendamento por dia do cliente
         LocalDateTime inicioDia = dto.dataHora().toLocalDate().atStartOfDay();
         LocalDateTime fimDia = dto.dataHora().toLocalDate().atTime(23, 59, 59);
@@ -48,18 +48,18 @@ class AgendamentoService {
         }
 
         // Usando os Services das outras features para garantir o encapsulamento
-        Cliente cliente = clienteService.buscarPorId(dto.clienteId())
+        ClienteModel cliente = clienteService.buscarPorId(dto.clienteId())
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado."));
                 
-        Barbeiro barbeiro = barbeiroService.buscarPorId(dto.barbeiroId())
+        BarbeiroModel barbeiro = barbeiroService.buscarPorId(dto.barbeiroId())
                 .orElseThrow(() -> new RuntimeException("Barbeiro não encontrado."));
 
-        Agendamento agendamento = new Agendamento(null, cliente, barbeiro, dto.dataHora(), StatusAgendamento.AGENDADO);
+        AgendamentoModel agendamento = new AgendamentoModel(null, cliente, barbeiro, dto.dataHora(), StatusAgendamento.AGENDADO);
         return agendamentoRepository.save(agendamento);
     }
 
-    public Agendamento cancelar(Long id) {
-        Agendamento agendamento = agendamentoRepository.findById(id)
+    public AgendamentoModel cancelar(Long id) {
+        AgendamentoModel agendamento = agendamentoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Agendamento não encontrado com ID: " + id));
 
         // Regra 3: Cliente deve cancelar com pelo menos 1h de antecedência

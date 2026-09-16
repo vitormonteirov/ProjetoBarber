@@ -1,4 +1,4 @@
-package dev.vitor.barbearia.ProjetoBarber.barbeiro;
+package dev.vitor.barbearia.ProjetoBarber.cliente;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,11 +9,11 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Barbeiro {
+public class ClienteModel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nome;
-    private String email;
     private String telefone;
+    private String email;
 }

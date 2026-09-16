@@ -4,4 +4,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-interface BarbeiroRepository extends JpaRepository<Barbeiro, Long> {}
+interface BarbeiroRepository extends JpaRepository<BarbeiroModel, Long> {}
