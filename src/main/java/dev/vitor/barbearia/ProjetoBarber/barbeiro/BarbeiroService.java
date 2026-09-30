@@ -17,7 +17,7 @@ public class BarbeiroService {
     public Optional<BarbeiroModel> buscarPorId(Long id) { return barbeiroRepository.findById(id); }
 
     public BarbeiroModel criar(BarbeiroDTO dto) {
-        BarbeiroModel barbeiro = new BarbeiroModel(null, dto.nome(), dto.email(), dto.telefone());
+        BarbeiroModel barbeiro = new BarbeiroModel(null, dto.nome(), dto.email(), dto.telefone(), null);
         return barbeiroRepository.save(barbeiro);
     }
 

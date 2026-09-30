@@ -17,7 +17,7 @@ public class ClienteService {
     public Optional<ClienteModel> buscarPorId(Long id) { return clienteRepository.findById(id); }
 
     public ClienteModel criar(ClienteDTO dto) {
-        ClienteModel cliente = new ClienteModel(null, dto.nome(), dto.telefone(), dto.email());
+        ClienteModel cliente = new ClienteModel(null, dto.nome(), dto.telefone(), dto.email(), null);
         return clienteRepository.save(cliente);
     }
 

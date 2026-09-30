@@ -12,11 +12,13 @@ interface AgendamentoRepository extends JpaRepository<AgendamentoModel, Long> {
 
     boolean existsByBarbeiroIdAndDataHoraAndStatus(Long barbeiroId, LocalDateTime dataHora, StatusAgendamento status);
 
-    @Query("SELECT COUNT(a) > 0 FROM Agendamento a WHERE a.cliente.id = :clienteId " +
+    @Query("SELECT COUNT(a) > 0 FROM AgendamentoModel a WHERE a.cliente.id = :clienteId " +
+           "AND a.barbeiro.id = :barbeiroId " +
            "AND a.dataHora >= :inicioDia AND a.dataHora <= :fimDia " +
            "AND a.status = :status")
-    boolean existsByClienteIdAndDiaLimit(
+    boolean existsByClienteIdAndBarbeiroIdAndDiaLimit(
             @Param("clienteId") Long clienteId, 
+            @Param("barbeiroId") Long barbeiroId,
             @Param("inicioDia") LocalDateTime inicioDia, 
             @Param("fimDia") LocalDateTime fimDia, 
             @Param("status") StatusAgendamento status);

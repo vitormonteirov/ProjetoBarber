@@ -28,15 +28,15 @@ class AgendamentoService {
     }
 
     public AgendamentoModel agendar(AgendamentoDTO dto) {
-        // Regra 1: Verificar limite de agendamento por dia do cliente
+        // Regra 1: Verificar limite de agendamento por dia do cliente com o mesmo barbeiro
         LocalDateTime inicioDia = dto.dataHora().toLocalDate().atStartOfDay();
         LocalDateTime fimDia = dto.dataHora().toLocalDate().atTime(23, 59, 59);
         
-        boolean clienteJaAgendadoHoje = agendamentoRepository.existsByClienteIdAndDiaLimit(
-                dto.clienteId(), inicioDia, fimDia, StatusAgendamento.AGENDADO);
+        boolean clienteJaAgendadoHoje = agendamentoRepository.existsByClienteIdAndBarbeiroIdAndDiaLimit(
+                dto.clienteId(), dto.barbeiroId(), inicioDia, fimDia, StatusAgendamento.AGENDADO);
                 
         if (clienteJaAgendadoHoje) {
-            throw new IllegalArgumentException("Cliente já possui um agendamento marcado para este dia.");
+            throw new IllegalArgumentException("Cliente já possui um agendamento marcado para este dia com este barbeiro.");
         }
 
         // Regra 2: Barbeiro não pode ter 2 clientes no mesmo horário
