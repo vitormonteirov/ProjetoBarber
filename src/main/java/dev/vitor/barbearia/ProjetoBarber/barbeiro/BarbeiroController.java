@@ -16,24 +16,33 @@ class BarbeiroController {
     @Autowired
     private BarbeiroService barbeiroService;
 
+    @Autowired
+    private BarbeiroMapper barbeiroMapper;
+
     @GetMapping
-    public ResponseEntity<Page<BarbeiroModel>> listar(@PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(barbeiroService.listarTodos(pageable));
+    public ResponseEntity<Page<BarbeiroResponseDTO>> listar(@PageableDefault(size = 10) Pageable pageable) {
+        Page<BarbeiroModel> barbeiros = barbeiroService.listarTodos(pageable);
+        return ResponseEntity.ok(barbeiros.map(barbeiroMapper::toResponseDTO));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BarbeiroModel> buscarPorId(@PathVariable Long id) {
-        return barbeiroService.buscarPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<BarbeiroResponseDTO> buscarPorId(@PathVariable Long id) {
+        return barbeiroService.buscarPorId(id)
+                .map(barbeiroMapper::toResponseDTO)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<BarbeiroModel> criar(@RequestBody @Valid BarbeiroDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(barbeiroService.criar(dto));
+    public ResponseEntity<BarbeiroResponseDTO> criar(@RequestBody @Valid BarbeiroDTO dto) {
+        BarbeiroModel model = barbeiroService.criar(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(barbeiroMapper.toResponseDTO(model));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BarbeiroModel> atualizar(@PathVariable Long id, @RequestBody @Valid BarbeiroDTO dto) {
-        return ResponseEntity.ok(barbeiroService.atualizar(id, dto));
+    public ResponseEntity<BarbeiroResponseDTO> atualizar(@PathVariable Long id, @RequestBody @Valid BarbeiroDTO dto) {
+        BarbeiroModel model = barbeiroService.atualizar(id, dto);
+        return ResponseEntity.ok(barbeiroMapper.toResponseDTO(model));
     }
 
     @DeleteMapping("/{id}")

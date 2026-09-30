@@ -16,24 +16,33 @@ class ClienteController {
     @Autowired
     private ClienteService clienteService;
 
+    @Autowired
+    private ClienteMapper clienteMapper;
+
     @GetMapping
-    public ResponseEntity<Page<ClienteModel>> listar(@PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(clienteService.listarTodos(pageable));
+    public ResponseEntity<Page<ClienteResponseDTO>> listar(@PageableDefault(size = 10) Pageable pageable) {
+        Page<ClienteModel> clientes = clienteService.listarTodos(pageable);
+        return ResponseEntity.ok(clientes.map(clienteMapper::toResponseDTO));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ClienteModel> buscarPorId(@PathVariable Long id) {
-        return clienteService.buscarPorId(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<ClienteResponseDTO> buscarPorId(@PathVariable Long id) {
+        return clienteService.buscarPorId(id)
+                .map(clienteMapper::toResponseDTO)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<ClienteModel> criar(@RequestBody @Valid ClienteDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(clienteService.criar(dto));
+    public ResponseEntity<ClienteResponseDTO> criar(@RequestBody @Valid ClienteDTO dto) {
+        ClienteModel model = clienteService.criar(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(clienteMapper.toResponseDTO(model));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ClienteModel> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteDTO dto) {
-        return ResponseEntity.ok(clienteService.atualizar(id, dto));
+    public ResponseEntity<ClienteResponseDTO> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteDTO dto) {
+        ClienteModel model = clienteService.atualizar(id, dto);
+        return ResponseEntity.ok(clienteMapper.toResponseDTO(model));
     }
 
     @DeleteMapping("/{id}")

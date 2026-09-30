@@ -15,19 +15,25 @@ class AgendamentoController {
 
     @Autowired
     private AgendamentoService agendamentoService;
+    
+    @Autowired
+    private AgendamentoMapper agendamentoMapper;
 
     @GetMapping
-    public ResponseEntity<Page<AgendamentoModel>> listar(@PageableDefault(size = 10) Pageable pageable) {
-        return ResponseEntity.ok(agendamentoService.listarTodos(pageable));
+    public ResponseEntity<Page<AgendamentoResponseDTO>> listar(@PageableDefault(size = 10) Pageable pageable) {
+        Page<AgendamentoModel> agendamentos = agendamentoService.listarTodos(pageable);
+        return ResponseEntity.ok(agendamentos.map(agendamentoMapper::toResponseDTO));
     }
 
     @PostMapping
-    public ResponseEntity<AgendamentoModel> agendar(@RequestBody @Valid AgendamentoDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(agendamentoService.agendar(dto));
+    public ResponseEntity<AgendamentoResponseDTO> agendar(@RequestBody @Valid AgendamentoDTO dto) {
+        AgendamentoModel model = agendamentoService.agendar(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(agendamentoMapper.toResponseDTO(model));
     }
 
     @PatchMapping("/{id}/cancelar")
-    public ResponseEntity<AgendamentoModel> cancelar(@PathVariable Long id) {
-        return ResponseEntity.ok(agendamentoService.cancelar(id));
+    public ResponseEntity<AgendamentoResponseDTO> cancelar(@PathVariable Long id) {
+        AgendamentoModel model = agendamentoService.cancelar(id);
+        return ResponseEntity.ok(agendamentoMapper.toResponseDTO(model));
     }
 }
