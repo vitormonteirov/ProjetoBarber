@@ -8,9 +8,18 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 
 @Repository
-interface AgendamentoRepository extends JpaRepository<AgendamentoModel, Long> {
+public interface AgendamentoRepository extends JpaRepository<AgendamentoModel, Long> {
 
     boolean existsByBarbeiroIdAndDataHoraAndStatus(Long barbeiroId, LocalDateTime dataHora, StatusAgendamento status);
+
+    @Query("SELECT COUNT(a) > 0 FROM AgendamentoModel a WHERE a.barbeiro.id = :barbeiroId " +
+           "AND a.status = :status " +
+           "AND ((a.dataHora < :dataHoraFim AND COALESCE(a.dataHoraFim, a.dataHora) > :dataHoraInicio))")
+    boolean existsConflitoHorarioBarbeiro(
+            @Param("barbeiroId") Long barbeiroId,
+            @Param("dataHoraInicio") LocalDateTime dataHoraInicio,
+            @Param("dataHoraFim") LocalDateTime dataHoraFim,
+            @Param("status") StatusAgendamento status);
 
     @Query("SELECT COUNT(a) > 0 FROM AgendamentoModel a WHERE a.cliente.id = :clienteId " +
            "AND a.barbeiro.id = :barbeiroId " +

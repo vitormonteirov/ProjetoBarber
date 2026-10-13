@@ -1,7 +1,7 @@
 package dev.vitor.barbearia.ProjetoBarber.agendamento;
 
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -11,13 +11,11 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/agendamentos")
+@RequiredArgsConstructor
 class AgendamentoController {
 
-    @Autowired
-    private AgendamentoService agendamentoService;
-    
-    @Autowired
-    private AgendamentoMapper agendamentoMapper;
+    private final AgendamentoService agendamentoService;
+    private final AgendamentoMapper agendamentoMapper;
 
     @GetMapping
     public ResponseEntity<Page<AgendamentoResponseDTO>> listar(@PageableDefault(size = 10) Pageable pageable) {

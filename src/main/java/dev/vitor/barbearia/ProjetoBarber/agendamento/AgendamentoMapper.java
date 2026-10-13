@@ -12,7 +12,11 @@ public class AgendamentoMapper {
             model.getCliente() != null ? model.getCliente().getNome() : null,
             model.getBarbeiro() != null ? model.getBarbeiro().getId() : null,
             model.getBarbeiro() != null ? model.getBarbeiro().getNome() : null,
+            model.getServico() != null ? model.getServico().getId() : null,
+            model.getServico() != null ? model.getServico().getNome() : null,
             model.getDataHora(),
+            model.getDataHoraFim(),
+            model.getPreco(),
             model.getStatus() != null ? model.getStatus().name() : null
         );
     }
