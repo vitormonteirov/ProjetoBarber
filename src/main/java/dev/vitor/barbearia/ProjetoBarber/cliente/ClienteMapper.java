@@ -6,7 +6,13 @@ import org.springframework.stereotype.Component;
 public class ClienteMapper {
     public ClienteResponseDTO toResponseDTO(ClienteModel model) {
         if (model == null) return null;
-        return new ClienteResponseDTO(model.getId(), model.getNome(), model.getTelefone(), model.getEmail());
+        return new ClienteResponseDTO(
+            model.getId(),
+            model.getNome(),
+            model.getTelefone(),
+            model.getEmail(),
+            model.getAtivo()
+        );
     }
 
     public ClienteModel toModel(ClienteDTO dto) {
@@ -15,6 +21,7 @@ public class ClienteMapper {
         model.setNome(dto.nome());
         model.setTelefone(dto.telefone());
         model.setEmail(dto.email());
+        model.setAtivo(true);
         return model;
     }
 }

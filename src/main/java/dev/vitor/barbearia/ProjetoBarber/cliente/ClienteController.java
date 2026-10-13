@@ -1,7 +1,7 @@
 package dev.vitor.barbearia.ProjetoBarber.cliente;
 
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -11,17 +11,19 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/clientes")
+@RequiredArgsConstructor
 class ClienteController {
 
-    @Autowired
-    private ClienteService clienteService;
-
-    @Autowired
-    private ClienteMapper clienteMapper;
+    private final ClienteService clienteService;
+    private final ClienteMapper clienteMapper;
 
     @GetMapping
-    public ResponseEntity<Page<ClienteResponseDTO>> listar(@PageableDefault(size = 10) Pageable pageable) {
-        Page<ClienteModel> clientes = clienteService.listarTodos(pageable);
+    public ResponseEntity<Page<ClienteResponseDTO>> listar(
+            @RequestParam(defaultValue = "true") boolean apenasAtivos,
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<ClienteModel> clientes = apenasAtivos
+                ? clienteService.listarAtivos(pageable)
+                : clienteService.listarTodos(pageable);
         return ResponseEntity.ok(clientes.map(clienteMapper::toResponseDTO));
     }
 

@@ -1,7 +1,7 @@
 package dev.vitor.barbearia.ProjetoBarber.barbeiro;
 
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -11,17 +11,19 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/barbeiros")
+@RequiredArgsConstructor
 class BarbeiroController {
 
-    @Autowired
-    private BarbeiroService barbeiroService;
-
-    @Autowired
-    private BarbeiroMapper barbeiroMapper;
+    private final BarbeiroService barbeiroService;
+    private final BarbeiroMapper barbeiroMapper;
 
     @GetMapping
-    public ResponseEntity<Page<BarbeiroResponseDTO>> listar(@PageableDefault(size = 10) Pageable pageable) {
-        Page<BarbeiroModel> barbeiros = barbeiroService.listarTodos(pageable);
+    public ResponseEntity<Page<BarbeiroResponseDTO>> listar(
+            @RequestParam(defaultValue = "true") boolean apenasAtivos,
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<BarbeiroModel> barbeiros = apenasAtivos
+                ? barbeiroService.listarAtivos(pageable)
+                : barbeiroService.listarTodos(pageable);
         return ResponseEntity.ok(barbeiros.map(barbeiroMapper::toResponseDTO));
     }
 

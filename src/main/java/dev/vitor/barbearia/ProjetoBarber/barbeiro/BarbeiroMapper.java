@@ -6,7 +6,13 @@ import org.springframework.stereotype.Component;
 public class BarbeiroMapper {
     public BarbeiroResponseDTO toResponseDTO(BarbeiroModel model) {
         if (model == null) return null;
-        return new BarbeiroResponseDTO(model.getId(), model.getNome(), model.getEmail(), model.getTelefone());
+        return new BarbeiroResponseDTO(
+            model.getId(),
+            model.getNome(),
+            model.getEmail(),
+            model.getTelefone(),
+            model.getAtivo()
+        );
     }
 
     public BarbeiroModel toModel(BarbeiroDTO dto) {
@@ -15,6 +21,7 @@ public class BarbeiroMapper {
         model.setNome(dto.nome());
         model.setEmail(dto.email());
         model.setTelefone(dto.telefone());
+        model.setAtivo(true);
         return model;
     }
 }
