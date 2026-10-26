@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface ClienteRepository extends JpaRepository<ClienteModel, Long> {
     Page<ClienteModel> findByAtivoTrue(Pageable pageable);
     Optional<ClienteModel> findByIdAndAtivoTrue(Long id);
+    Optional<ClienteModel> findByEmail(String email);
 }
