@@ -17,7 +17,8 @@ public class AgendamentoMapper {
             model.getDataHora(),
             model.getDataHoraFim(),
             model.getPreco(),
-            model.getStatus() != null ? model.getStatus().name() : null
+            model.getStatus() != null ? model.getStatus().name() : null,
+            model.getNotaAlteracao()
         );
     }
 }

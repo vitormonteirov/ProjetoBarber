@@ -11,4 +11,5 @@ import java.util.Optional;
 public interface BarbeiroRepository extends JpaRepository<BarbeiroModel, Long> {
     Page<BarbeiroModel> findByAtivoTrue(Pageable pageable);
     Optional<BarbeiroModel> findByIdAndAtivoTrue(Long id);
+    Optional<BarbeiroModel> findByEmail(String email);
 }

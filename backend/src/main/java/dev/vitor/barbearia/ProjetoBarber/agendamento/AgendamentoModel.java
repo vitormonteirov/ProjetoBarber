@@ -46,4 +46,7 @@ public class AgendamentoModel {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusAgendamento status;
+
+    @Column(name = "nota_alteracao", length = 500)
+    private String notaAlteracao;
 }
