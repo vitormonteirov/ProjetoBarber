@@ -1,8 +1,21 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+# Global & IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Environment Variables
+.env
+*.env.local
+
+# Backend (Java / Maven)
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+backend/HELP.md
 
 ### STS ###
 .apt_generated
@@ -13,25 +26,21 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
 ### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+**/nbproject/private/
+**/nbbuild/
+**/dist/
+**/nbdist/
+**/.nb-gradle/
+**/build/
 
-### VS Code ###
-.vscode/
-
-### Environment Variables ###
-.env
-
+# Frontend (Node / Vite / React / Vue)
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
+frontend/out/
+frontend/build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
