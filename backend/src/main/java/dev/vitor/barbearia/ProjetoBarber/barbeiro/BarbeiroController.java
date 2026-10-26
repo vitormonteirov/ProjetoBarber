@@ -7,12 +7,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/barbeiros")
 @RequiredArgsConstructor
-class BarbeiroController {
+public class BarbeiroController {
 
     private final BarbeiroService barbeiroService;
     private final BarbeiroMapper barbeiroMapper;
@@ -36,18 +37,21 @@ class BarbeiroController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('GESTOR')")
     public ResponseEntity<BarbeiroResponseDTO> criar(@RequestBody @Valid BarbeiroDTO dto) {
         BarbeiroModel model = barbeiroService.criar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(barbeiroMapper.toResponseDTO(model));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('GESTOR')")
     public ResponseEntity<BarbeiroResponseDTO> atualizar(@PathVariable Long id, @RequestBody @Valid BarbeiroDTO dto) {
         BarbeiroModel model = barbeiroService.atualizar(id, dto);
         return ResponseEntity.ok(barbeiroMapper.toResponseDTO(model));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('GESTOR')")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         barbeiroService.excluir(id);
         return ResponseEntity.noContent().build();

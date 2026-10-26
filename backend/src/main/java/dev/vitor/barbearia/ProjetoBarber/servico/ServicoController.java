@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -36,18 +37,21 @@ public class ServicoController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('GESTOR')")
     public ResponseEntity<ServicoResponseDTO> criar(@RequestBody @Valid ServicoDTO dto) {
         ServicoModel model = servicoService.criar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(servicoMapper.toResponseDTO(model));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('GESTOR')")
     public ResponseEntity<ServicoResponseDTO> atualizar(@PathVariable Long id, @RequestBody @Valid ServicoDTO dto) {
         ServicoModel model = servicoService.atualizar(id, dto);
         return ResponseEntity.ok(servicoMapper.toResponseDTO(model));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('GESTOR')")
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         servicoService.excluir(id);
         return ResponseEntity.noContent().build();
