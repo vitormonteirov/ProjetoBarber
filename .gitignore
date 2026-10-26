@@ -8,9 +8,22 @@
 .DS_Store
 Thumbs.db
 
-# Environment Variables
-.env
+# Sensitive / Secret Environment Files (todas as pastas e subpastas)
+**/.env
+**/.env.*
+*.env
+*.env.*
 *.env.local
+*.env.*.local
+
+# Chaves, Certificados e Credenciais
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.p12
+*.jks
+*.keystore
 
 # Backend (Java / Maven)
 **/target/
