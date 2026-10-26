@@ -3,60 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BarberShop - Painel de Controle</title>
+    <title>Tenorio's Barber | Estilo, Precisão e Tradição</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>💈 Barbearia - Painel de Integração</h1>
-            <p>Front-end conectado à API Spring Boot</p>
-            <div class="badge-status">
-                <span id="api-status-dot" class="dot"></span>
-                <span id="api-status-text">Verificando conexão com a API...</span>
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="container">
+            <a href="#" class="logo">
+                <span class="logo-badge">✂</span>
+                TENORIO'S BARBER
+            </a>
+
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="#servicos">Serviços</a></li>
+                    <li><a href="#barbeiros">Barbeiros</a></li>
+                    <li><a href="#agendamento">Agendar</a></li>
+                </ul>
+            </nav>
+
+            <div class="status-indicator">
+                <span id="api-dot" class="dot"></span>
+                <span id="api-text">Conectando...</span>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <div id="msg-feedback" class="alert"></div>
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-tag">Exclusividade & Tradição • Tenorio's Barber</div>
+            <h1>Eleve o seu padrão.<br><span>Domine o seu estilo na Tenorio's.</span></h1>
+            <p>Tradição, navalha afiada e as técnicas mais modernas de barbearia reunidas em um ambiente exclusivo para cavalheiros exigentes.</p>
+            <div class="hero-actions">
+                <a href="#agendamento" class="btn btn-primary">Agendar Horário Agora</a>
+                <a href="#servicos" class="btn btn-secondary">Ver Catálogo de Serviços</a>
+            </div>
+        </div>
+    </section>
 
-        <main class="grid">
-            <!-- Formulário de Cadastro -->
-            <section class="card">
-                <h2>➕ Cadastrar Novo Cliente</h2>
-                <form id="form-cliente">
-                    <div class="form-group">
-                        <label for="nome">Nome Completo</label>
-                        <input type="text" id="nome" placeholder="Ex: Carlos Silva" required>
-                    </div>
+    <!-- SERVIÇOS SECTION -->
+    <section id="servicos" class="section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Nossos <span>Serviços</span></h2>
+                <p class="section-subtitle">Escolha o corte ou tratamento ideal para você e clique para agendar</p>
+            </div>
+            <div id="grid-servicos" class="cards-grid">
+                <!-- Renderizado via JavaScript -->
+                <p style="text-align: center; grid-column: 1/-1; color: var(--text-muted);">Carregando catálogo de serviços...</p>
+            </div>
+        </div>
+    </section>
 
-                    <div class="form-group">
-                        <label for="telefone">Telefone (DDD + Número)</label>
-                        <input type="tel" id="telefone" placeholder="Ex: 11987654321" minlength="10" maxlength="15" required>
-                    </div>
+    <!-- BARBEIROS SECTION -->
+    <section id="barbeiros" class="section" style="background: var(--bg-surface);">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Nossa <span>Equipe</span></h2>
+                <p class="section-subtitle">Mestres das lâminas prontos para cuidar do seu visual</p>
+            </div>
+            <div id="grid-barbeiros" class="cards-grid">
+                <!-- Renderizado via JavaScript -->
+                <p style="text-align: center; grid-column: 1/-1; color: var(--text-muted);">Carregando barbeiros disponíveis...</p>
+            </div>
+        </div>
+    </section>
 
-                    <div class="form-group">
-                        <label for="email">E-mail</label>
-                        <input type="email" id="email" placeholder="Ex: carlos@email.com" required>
-                    </div>
+    <!-- AGENDAMENTO SECTION -->
+    <section id="agendamento" class="section booking-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Marcar <span>Agendamento</span></h2>
+                <p class="section-subtitle">Selecione as opções abaixo para garantir seu atendimento</p>
+            </div>
 
-                    <button type="submit">Cadastrar no Banco</button>
-                </form>
-            </section>
+            <div class="booking-layout">
+                <!-- FORMULÁRIO -->
+                <div class="form-panel">
+                    <form id="form-booking">
+                        
+                        <!-- Passo 1: Escolha do Serviço -->
+                        <div class="form-step">
+                            <div class="step-label">
+                                <span class="step-number">1</span>
+                                <span>Qual serviço você deseja?</span>
+                            </div>
+                            <div class="input-group">
+                                <label for="select-servico">Selecione o Serviço</label>
+                                <select id="select-servico" required>
+                                    <option value="">Carregando serviços...</option>
+                                </select>
+                            </div>
+                        </div>
 
-            <!-- Lista de Clientes -->
-            <section class="card">
-                <h2>
-                    <span>👥 Clientes Cadastrados</span>
-                    <button id="btn-refresh" class="btn-refresh" title="Recarregar lista">🔄 Atualizar</button>
-                </h2>
-                <div id="lista-clientes" class="list-container">
-                    <p class="empty-state">Carregando clientes...</p>
+                        <!-- Passo 2: Escolha do Barbeiro -->
+                        <div class="form-step">
+                            <div class="step-label">
+                                <span class="step-number">2</span>
+                                <span>Escolha seu Barbeiro</span>
+                            </div>
+                            <div class="input-group">
+                                <label for="select-barbeiro">Selecione o Profissional</label>
+                                <select id="select-barbeiro" required>
+                                    <option value="">Carregando barbeiros...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Passo 3: Dados do Cliente -->
+                        <div class="form-step">
+                            <div class="step-label">
+                                <span class="step-number">3</span>
+                                <span>Identificação do Cliente</span>
+                            </div>
+
+                            <div class="client-toggle">
+                                <button type="button" id="tab-cliente-existente" class="active">Já sou cliente</button>
+                                <button type="button" id="tab-cliente-novo">Novo cliente</button>
+                            </div>
+
+                            <!-- Caso já seja cliente -->
+                            <div id="box-cliente-existente" class="input-group">
+                                <label for="select-cliente">Selecione seu Nome</label>
+                                <select id="select-cliente">
+                                    <option value="">Carregando clientes...</option>
+                                </select>
+                            </div>
+
+                            <!-- Caso seja novo cliente -->
+                            <div id="box-cliente-novo" style="display: none;">
+                                <div class="input-group">
+                                    <label for="novo-nome">Nome Completo</label>
+                                    <input type="text" id="novo-nome" placeholder="Ex: João Ferreira">
+                                </div>
+                                <div class="input-row">
+                                    <div class="input-group">
+                                        <label for="novo-telefone">Telefone (com DDD)</label>
+                                        <input type="tel" id="novo-telefone" placeholder="11999998888">
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="novo-email">E-mail</label>
+                                        <input type="email" id="novo-email" placeholder="joao@email.com">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Passo 4: Data e Hora -->
+                        <div class="form-step">
+                            <div class="step-label">
+                                <span class="step-number">4</span>
+                                <span>Data e Horário</span>
+                            </div>
+                            <div class="input-group">
+                                <label for="input-data-hora">Escolha a data e o horário desejado</label>
+                                <input type="datetime-local" id="input-data-hora" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btn-submit-booking" class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: 1.1rem;">
+                            Confirmar Agendamento
+                        </button>
+                    </form>
                 </div>
-            </section>
-        </main>
+
+                <!-- RESUMO LATERAL -->
+                <aside class="summary-panel">
+                    <h3 class="summary-title">
+                        <span>📋</span> Resumo do Agendamento
+                    </h3>
+                    
+                    <div class="summary-item">
+                        <span class="label">Serviço:</span>
+                        <span id="resumo-servico" class="value">Nenhum selecionado</span>
+                    </div>
+
+                    <div class="summary-item">
+                        <span class="label">Duração estimada:</span>
+                        <span id="resumo-duracao" class="value">--</span>
+                    </div>
+
+                    <div class="summary-item">
+                        <span class="label">Barbeiro:</span>
+                        <span id="resumo-barbeiro" class="value">Nenhum selecionado</span>
+                    </div>
+
+                    <div class="summary-item">
+                        <span class="label">Data & Horário:</span>
+                        <span id="resumo-data" class="value">Não definido</span>
+                    </div>
+
+                    <div class="summary-total">
+                        <span class="total-label">Total:</span>
+                        <span id="resumo-preco" class="total-price">R$ 0,00</span>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </section>
+
+    <!-- MODAL DE CONFIRMAÇÃO DO AGENDAMENTO -->
+    <div id="modal-confirmacao" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-icon">✂</div>
+            <h3 class="modal-title">Agendamento Confirmado!</h3>
+            <p class="modal-subtitle">Seu horário na <strong>Tenorio's Barber</strong> foi reservado com sucesso.</p>
+
+            <div class="modal-details">
+                <div class="modal-row">
+                    <span>Protocolo:</span>
+                    <strong id="modal-protocolo">#0</strong>
+                </div>
+                <div class="modal-row">
+                    <span>Cliente:</span>
+                    <strong id="modal-cliente">--</strong>
+                </div>
+                <div class="modal-row">
+                    <span>Serviço:</span>
+                    <strong id="modal-servico">--</strong>
+                </div>
+                <div class="modal-row">
+                    <span>Barbeiro:</span>
+                    <strong id="modal-barbeiro">--</strong>
+                </div>
+                <div class="modal-row">
+                    <span>Data & Hora:</span>
+                    <strong id="modal-data" style="color: var(--blue-accent);">--</strong>
+                </div>
+                <div class="modal-row" style="border-top: 1px dashed var(--border-subtle); padding-top: 0.75rem;">
+                    <span>Total Estimado:</span>
+                    <strong id="modal-preco" style="font-size: 1.15rem; color: var(--blue-accent);">R$ 0,00</strong>
+                </div>
+            </div>
+
+            <button type="button" id="btn-fechar-modal" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">
+                Concluir
+            </button>
+        </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <p>© 2026 Tenorio's Barber. Todos os direitos reservados • Sistema Integrado com Spring Boot REST API.</p>
+        </div>
+    </footer>
+
+    <!-- CONTAINER DE NOTIFICAÇÕES (TOASTS) -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- SCRIPTS -->
     <script src="js/api.js"></script>
     <script src="js/app.js"></script>
 </body>

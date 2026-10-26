@@ -1,6 +1,6 @@
-# 💈 Projeto Barber - Sistema de Barbearia
+# 💈 Tenorio's Barber - Sistema de Barbearia
 
-Sistema fullstack para gerenciamento de barbearia, agendamentos, clientes, serviços e barbeiros.
+Sistema fullstack de alta precisão para a **Tenorio's Barber**, gerenciando agendamentos, clientes, serviços e barbeiros.
 
 ## 📁 Estrutura do Repositório (Monorepo)
 
