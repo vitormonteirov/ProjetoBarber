@@ -5,8 +5,52 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
 const api = {
-    // Utilitário para lidar com respostas HTTP e erros do GlobalExceptionHandler
-    async handleResponse(response) {
+    // --- GERENCIAMENTO DE SESSÃO / JWT ---
+    getToken() {
+        return localStorage.getItem('barber_token');
+    },
+
+    setSession(authData) {
+        if (authData?.token) {
+            localStorage.setItem('barber_token', authData.token);
+            localStorage.setItem('barber_user', JSON.stringify({
+                id: authData.id,
+                nome: authData.nome,
+                email: authData.email,
+                role: authData.role
+            }));
+        }
+    },
+
+    getUsuarioLogado() {
+        try {
+            const userStr = localStorage.getItem('barber_user');
+            return userStr ? JSON.parse(userStr) : null;
+        } catch {
+            return null;
+        }
+    },
+
+    logout() {
+        localStorage.removeItem('barber_token');
+        localStorage.removeItem('barber_user');
+    },
+
+    // --- REQUISIÇÃO CENTRALIZADA COM CABEÇALHOS AUTOMÁTICOS ---
+    async request(endpoint, options = {}) {
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+        };
+
+        const token = this.getToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const url = `${API_BASE_URL}${endpoint}`;
+        const response = await fetch(url, { ...options, headers });
+
         if (!response.ok) {
             let errorMsg = `Erro na requisição (${response.status})`;
             try {
@@ -21,72 +65,82 @@ const api = {
             } catch (_) {}
             throw new Error(errorMsg);
         }
+
         if (response.status === 204) return null;
         return await response.json();
     },
 
-    // --- BARBEIROS ---
+    // --- AUTENTICAÇÃO ---
+    async login(email, senha) {
+        const data = await this.request('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, senha })
+        });
+        this.setSession(data);
+        return data;
+    },
+
+    async registrar(nome, email, senha, telefone) {
+        const data = await this.request('/auth/registrar', {
+            method: 'POST',
+            body: JSON.stringify({ nome, email, senha, telefone })
+        });
+        this.setSession(data);
+        return data;
+    },
+
+    // --- BARBEIROS (Público) ---
     async listarBarbeiros(apenasAtivos = true, size = 50) {
-        const res = await fetch(`${API_BASE_URL}/barbeiros?apenasAtivos=${apenasAtivos}&size=${size}`);
-        const data = await this.handleResponse(res);
+        const data = await this.request(`/barbeiros?apenasAtivos=${apenasAtivos}&size=${size}`);
         return data?.content || [];
     },
 
     async buscarBarbeiroPorId(id) {
-        const res = await fetch(`${API_BASE_URL}/barbeiros/${id}`);
-        return await this.handleResponse(res);
+        return await this.request(`/barbeiros/${id}`);
     },
 
-    // --- SERVIÇOS ---
+    // --- SERVIÇOS (Público) ---
     async listarServicos(apenasAtivos = true, size = 50) {
-        const res = await fetch(`${API_BASE_URL}/servicos?apenasAtivos=${apenasAtivos}&size=${size}`);
-        const data = await this.handleResponse(res);
+        const data = await this.request(`/servicos?apenasAtivos=${apenasAtivos}&size=${size}`);
         return data?.content || [];
     },
 
-    // --- CLIENTES ---
-    async listarClientes(apenasAtivos = true, size = 100) {
-        const res = await fetch(`${API_BASE_URL}/clientes?apenasAtivos=${apenasAtivos}&size=${size}`);
-        const data = await this.handleResponse(res);
-        return data?.content || [];
+    // --- DISPONIBILIDADE DE HORÁRIOS (Público) ---
+    // Retorna array de LocalTime string: ["08:00:00", "08:30:00", ...]
+    async consultarDisponibilidade(barbeiroId, servicoId, dataIso) {
+        let endpoint = `/agendamentos/disponibilidade?barbeiroId=${barbeiroId}&data=${dataIso}`;
+        if (servicoId) {
+            endpoint += `&servicoId=${servicoId}`;
+        }
+        return await this.request(endpoint);
     },
 
-    async criarCliente(cliente) {
-        const res = await fetch(`${API_BASE_URL}/clientes`, {
+    // --- AGENDAMENTOS (Requer autenticação CLIENTE ou GESTOR) ---
+    async criarAgendamento(payload) {
+        return await this.request('/agendamentos', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cliente)
+            body: JSON.stringify(payload)
         });
-        return await this.handleResponse(res);
     },
 
-    // --- AGENDAMENTOS ---
-    async listarAgendamentos(page = 0, size = 20) {
-        const res = await fetch(`${API_BASE_URL}/agendamentos?page=${page}&size=${size}&sort=dataHora,desc`);
-        const data = await this.handleResponse(res);
+    async meusAgendamentos(page = 0, size = 10) {
+        const data = await this.request(`/agendamentos/meus-agendamentos?page=${page}&size=${size}`);
         return data?.content || [];
-    },
-
-    async criarAgendamento(agendamento) {
-        const res = await fetch(`${API_BASE_URL}/agendamentos`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(agendamento)
-        });
-        return await this.handleResponse(res);
     },
 
     async cancelarAgendamento(id) {
-        const res = await fetch(`${API_BASE_URL}/agendamentos/${id}/cancelar`, {
+        return await this.request(`/agendamentos/${id}/cancelar`, {
             method: 'PATCH'
         });
-        return await this.handleResponse(res);
     },
 
     // Verificação de saúde da API
     async verificarConexao() {
         try {
-            const res = await fetch(`${API_BASE_URL}/servicos?size=1`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch(`${API_BASE_URL}/servicos?size=1`, { signal: controller.signal });
+            clearTimeout(timeoutId);
             return res.ok;
         } catch {
             return false;

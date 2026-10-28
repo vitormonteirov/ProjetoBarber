@@ -3,257 +3,485 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tenorio's Barber | Estilo, Precisão e Tradição</title>
+    <meta name="description" content="Tenorio's Barber - Agendamento online de cortes e tratamentos com os melhores mestres das lâminas. Rápido, intuitivo e exclusivo.">
+    <title>Tenorio's Barber | Estilo, Precisão & Agendamento Online</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
     <!-- NAVBAR -->
-    <header class="navbar">
-        <div class="container">
+    <header class="navbar" id="top">
+        <div class="container navbar-inner">
             <a href="#" class="logo">
-                <span class="logo-badge">✂</span>
-                TENORIO'S BARBER
+                <span class="logo-icon">✂</span>
+                <span class="logo-text">TENORIO'S <span>BARBER</span></span>
             </a>
 
-            <nav>
+            <nav class="nav-menu">
                 <ul class="nav-links">
                     <li><a href="#servicos">Serviços</a></li>
-                    <li><a href="#barbeiros">Barbeiros</a></li>
-                    <li><a href="#agendamento">Agendar</a></li>
+                    <li><a href="#barbeiros">Profissionais</a></li>
+                    <li><a href="#agendamento" class="nav-highlight">Agendar Online</a></li>
+                    <li id="nav-meus-agendamentos-item" style="display: none;">
+                        <a href="#meus-agendamentos" id="btn-abrir-meus-agendamentos">Meus Agendamentos</a>
+                    </li>
                 </ul>
             </nav>
 
-            <div class="status-indicator">
-                <span id="api-dot" class="dot"></span>
-                <span id="api-text">Conectando...</span>
+            <div class="nav-actions">
+                <!-- Status da Conexão com Spring Boot -->
+                <div class="api-status-badge" id="api-status-badge" title="Status da API Backend">
+                    <span id="api-dot" class="dot"></span>
+                    <span id="api-text">Verificando...</span>
+                </div>
+
+                <!-- Perfil do Usuário / Botão de Acesso -->
+                <div id="auth-nav-container">
+                    <button type="button" id="btn-abrir-login" class="btn btn-outline-sm">
+                        <span>Entrar</span>
+                    </button>
+                    <div id="user-badge" class="user-badge" style="display: none;">
+                        <div class="user-avatar" id="nav-user-avatar">U</div>
+                        <div class="user-info">
+                            <span class="user-name" id="nav-user-name">Cliente</span>
+                            <span class="user-role">Cliente VIP</span>
+                        </div>
+                        <button type="button" id="btn-logout" class="btn-icon-subtle" title="Sair da conta">
+                            ✕
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
     <!-- HERO SECTION -->
     <section class="hero">
-        <div class="container">
-            <div class="hero-tag">Exclusividade & Tradição • Tenorio's Barber</div>
-            <h1>Eleve o seu padrão.<br><span>Domine o seu estilo na Tenorio's.</span></h1>
-            <p>Tradição, navalha afiada e as técnicas mais modernas de barbearia reunidas em um ambiente exclusivo para cavalheiros exigentes.</p>
+        <div class="hero-bg-glow"></div>
+        <div class="container hero-content">
+            <div class="hero-tag">
+                <span class="sparkle">✦</span> Tradição & Tecnologia • Tenorio's Barber
+            </div>
+            <h1 class="hero-title">
+                Eleve o seu visual.<br>
+                <span class="gradient-text">Agende em poucos cliques.</span>
+            </h1>
+            <p class="hero-description">
+                Lâminas de alta precisão, toalha quente e atendimento personalizado. Escolha o serviço, selecione seu barbeiro de preferência e garanta seu horário instantaneamente.
+            </p>
             <div class="hero-actions">
-                <a href="#agendamento" class="btn btn-primary">Agendar Horário Agora</a>
-                <a href="#servicos" class="btn btn-secondary">Ver Catálogo de Serviços</a>
+                <a href="#agendamento" class="btn btn-primary btn-lg pulse-btn">
+                    <span>Agendar Agora</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+                <a href="#servicos" class="btn btn-ghost btn-lg">
+                    Conhecer Serviços
+                </a>
+            </div>
+
+            <!-- Mini estatísticas de credibilidade -->
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <strong>+1.500</strong>
+                    <span>Clientes Atendidos</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <strong>4.9 ★</strong>
+                    <span>Avaliação Média</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <strong>100%</strong>
+                    <span>Confirmação Imediata</span>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- SERVIÇOS SECTION -->
+    <!-- SEÇÃO DE CATÁLOGO DE SERVIÇOS -->
     <section id="servicos" class="section">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Nossos <span>Serviços</span></h2>
-                <p class="section-subtitle">Escolha o corte ou tratamento ideal para você e clique para agendar</p>
+                <span class="section-kicker">Menu de Cuidados</span>
+                <h2 class="section-title">Escolha o seu <span>Serviço</span></h2>
+                <p class="section-subtitle">Técnicas clássicas e modernas pensadas para o seu estilo.</p>
             </div>
+
             <div id="grid-servicos" class="cards-grid">
-                <!-- Renderizado via JavaScript -->
-                <p style="text-align: center; grid-column: 1/-1; color: var(--text-muted);">Carregando catálogo de serviços...</p>
+                <!-- Preenchido dinamicamente via JS -->
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
             </div>
         </div>
     </section>
 
-    <!-- BARBEIROS SECTION -->
-    <section id="barbeiros" class="section" style="background: var(--bg-surface);">
+    <!-- SEÇÃO DA EQUIPE DE BARBEIROS -->
+    <section id="barbeiros" class="section section-darker">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Nossa <span>Equipe</span></h2>
-                <p class="section-subtitle">Mestres das lâminas prontos para cuidar do seu visual</p>
+                <span class="section-kicker">Mestres da Navalha</span>
+                <h2 class="section-title">Nossos <span>Especialistas</span></h2>
+                <p class="section-subtitle">Profissionais dedicados a entregar o acabamento impecável que você merece.</p>
             </div>
+
             <div id="grid-barbeiros" class="cards-grid">
-                <!-- Renderizado via JavaScript -->
-                <p style="text-align: center; grid-column: 1/-1; color: var(--text-muted);">Carregando barbeiros disponíveis...</p>
+                <!-- Preenchido dinamicamente via JS -->
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
             </div>
         </div>
     </section>
 
-    <!-- AGENDAMENTO SECTION -->
+    <!-- SEÇÃO DO FLUXO INTELIGENTE DE AGENDAMENTO (WIZARD STEPPER) -->
     <section id="agendamento" class="section booking-section">
         <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Marcar <span>Agendamento</span></h2>
-                <p class="section-subtitle">Selecione as opções abaixo para garantir seu atendimento</p>
+            <div class="section-header text-center">
+                <span class="section-kicker">Reserva Online Descomplicada</span>
+                <h2 class="section-title">Reserve seu <span>Horário</span></h2>
+                <p class="section-subtitle">Fluxo guiado passo a passo para você não perder tempo.</p>
             </div>
 
-            <div class="booking-layout">
-                <!-- FORMULÁRIO -->
-                <div class="form-panel">
-                    <form id="form-booking">
-                        
-                        <!-- Passo 1: Escolha do Serviço -->
-                        <div class="form-step">
-                            <div class="step-label">
-                                <span class="step-number">1</span>
-                                <span>Qual serviço você deseja?</span>
-                            </div>
-                            <div class="input-group">
-                                <label for="select-servico">Selecione o Serviço</label>
-                                <select id="select-servico" required>
-                                    <option value="">Carregando serviços...</option>
-                                </select>
-                            </div>
+            <!-- STEPPER PROGRESS BAR -->
+            <div class="stepper-nav" role="tablist">
+                <button type="button" class="step-btn active" data-step="1" id="step-btn-1">
+                    <span class="step-circle">1</span>
+                    <span class="step-title">Serviço</span>
+                </button>
+                <div class="step-line"></div>
+                <button type="button" class="step-btn" data-step="2" id="step-btn-2">
+                    <span class="step-circle">2</span>
+                    <span class="step-title">Profissional</span>
+                </button>
+                <div class="step-line"></div>
+                <button type="button" class="step-btn" data-step="3" id="step-btn-3">
+                    <span class="step-circle">3</span>
+                    <span class="step-title">Data & Horário</span>
+                </button>
+                <div class="step-line"></div>
+                <button type="button" class="step-btn" data-step="4" id="step-btn-4">
+                    <span class="step-circle">4</span>
+                    <span class="step-title">Confirmação</span>
+                </button>
+            </div>
+
+            <!-- LAYOUT PRINCIPAL: WIZARD + RESUMO STICKY -->
+            <div class="booking-grid">
+                
+                <!-- CONTAINER DAS ETAPAS DO WIZARD -->
+                <div class="wizard-container">
+
+                    <!-- PASSO 1: ESCOLHA DO SERVIÇO -->
+                    <div class="wizard-step-pane active" id="wizard-pane-1">
+                        <div class="step-heading">
+                            <h3>1. Qual serviço você deseja realizar hoje?</h3>
+                            <p>Clique em uma das opções abaixo para selecionar:</p>
+                        </div>
+                        <div id="wizard-servicos-list" class="wizard-options-grid">
+                            <!-- Injetado dinamicamente -->
+                            <p class="loading-state">Carregando serviços...</p>
+                        </div>
+                        <div class="wizard-footer-nav justify-end">
+                            <button type="button" class="btn btn-primary" id="btn-next-step-1" disabled>
+                                Avançar para o Barbeiro →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASSO 2: ESCOLHA DO BARBEIRO -->
+                    <div class="wizard-step-pane" id="wizard-pane-2">
+                        <div class="step-heading">
+                            <h3>2. Com quem você prefere ser atendido?</h3>
+                            <p>Escolha o profissional de sua preferência ou selecione o primeiro disponível:</p>
+                        </div>
+                        <div id="wizard-barbeiros-list" class="wizard-options-grid">
+                            <!-- Injetado dinamicamente -->
+                            <p class="loading-state">Carregando barbeiros...</p>
+                        </div>
+                        <div class="wizard-footer-nav">
+                            <button type="button" class="btn btn-ghost" id="btn-prev-step-2">
+                                ← Voltar ao Serviço
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btn-next-step-2" disabled>
+                                Escolher Horário →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASSO 3: DATA E HORÁRIO DISPONÍVEL (SLOTS EM TEMPO REAL) -->
+                    <div class="wizard-step-pane" id="wizard-pane-3">
+                        <div class="step-heading">
+                            <h3>3. Escolha o dia e o melhor horário</h3>
+                            <p>Os horários abaixo são atualizados em tempo real conforme a agenda do barbeiro.</p>
                         </div>
 
-                        <!-- Passo 2: Escolha do Barbeiro -->
-                        <div class="form-step">
-                            <div class="step-label">
-                                <span class="step-number">2</span>
-                                <span>Escolha seu Barbeiro</span>
-                            </div>
-                            <div class="input-group">
-                                <label for="select-barbeiro">Selecione o Profissional</label>
-                                <select id="select-barbeiro" required>
-                                    <option value="">Carregando barbeiros...</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Passo 3: Dados do Cliente -->
-                        <div class="form-step">
-                            <div class="step-label">
-                                <span class="step-number">3</span>
-                                <span>Identificação do Cliente</span>
-                            </div>
-
-                            <div class="client-toggle">
-                                <button type="button" id="tab-cliente-existente" class="active">Já sou cliente</button>
-                                <button type="button" id="tab-cliente-novo">Novo cliente</button>
-                            </div>
-
-                            <!-- Caso já seja cliente -->
-                            <div id="box-cliente-existente" class="input-group">
-                                <label for="select-cliente">Selecione seu Nome</label>
-                                <select id="select-cliente">
-                                    <option value="">Carregando clientes...</option>
-                                </select>
-                            </div>
-
-                            <!-- Caso seja novo cliente -->
-                            <div id="box-cliente-novo" style="display: none;">
-                                <div class="input-group">
-                                    <label for="novo-nome">Nome Completo</label>
-                                    <input type="text" id="novo-nome" placeholder="Ex: João Ferreira">
+                        <!-- SELEÇÃO RÁPIDA DE DIAS -->
+                        <div class="date-selector-wrapper">
+                            <label class="input-label" for="booking-date-picker">Selecione a data:</label>
+                            <div class="date-quick-chips">
+                                <button type="button" class="chip-date active" id="chip-date-hoje">Hoje</button>
+                                <button type="button" class="chip-date" id="chip-date-amanha">Amanhã</button>
+                                <div class="date-input-group">
+                                    <input type="date" id="booking-date-picker" class="custom-date-input" aria-label="Escolher data no calendário">
                                 </div>
-                                <div class="input-row">
-                                    <div class="input-group">
-                                        <label for="novo-telefone">Telefone (com DDD)</label>
-                                        <input type="tel" id="novo-telefone" placeholder="11999998888">
+                            </div>
+                        </div>
+
+                        <!-- SLOTS DE HORÁRIOS LIVRES -->
+                        <div class="slots-section">
+                            <div class="slots-header">
+                                <span class="input-label">Horários livres disponíveis para esta data:</span>
+                                <span id="slots-count-badge" class="badge-slots">Calculando...</span>
+                            </div>
+
+                            <div id="slots-container" class="slots-grid">
+                                <!-- Chips clicáveis de horário (ex: 09:00, 09:30, 10:00) -->
+                                <p class="loading-state">Carregando horários disponíveis...</p>
+                            </div>
+                        </div>
+
+                        <div class="wizard-footer-nav">
+                            <button type="button" class="btn btn-ghost" id="btn-prev-step-3">
+                                ← Voltar ao Barbeiro
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btn-next-step-3" disabled>
+                                Finalizar Agendamento →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PASSO 4: IDENTIFICAÇÃO DO CLIENTE & CONFIRMAÇÃO -->
+                    <div class="wizard-step-pane" id="wizard-pane-4">
+                        <div class="step-heading">
+                            <h3>4. Identificação do Cliente</h3>
+                            <p>Informe seus dados para vincular o agendamento e receber confirmação.</p>
+                        </div>
+
+                        <!-- Caso o usuário JÁ ESTEJA LOGADO -->
+                        <div id="cliente-autenticado-box" class="card-logged-user" style="display: none;">
+                            <div class="logged-user-avatar" id="logged-user-avatar">U</div>
+                            <div class="logged-user-details">
+                                <div class="logged-user-greeting">Agendando como:</div>
+                                <h4 id="logged-user-name">Nome do Cliente</h4>
+                                <span id="logged-user-email">email@exemplo.com</span>
+                            </div>
+                            <button type="button" id="btn-trocar-usuario" class="btn btn-outline-sm">
+                                Trocar Conta
+                            </button>
+                        </div>
+
+                        <!-- Caso o usuário NÃO ESTEJA LOGADO -->
+                        <div id="cliente-deslogado-box">
+                            <div class="auth-tabs">
+                                <button type="button" class="auth-tab active" id="tab-auth-novo">Criar Nova Conta / Rápido</button>
+                                <button type="button" class="auth-tab" id="tab-auth-login">Já Tenho Conta (Entrar)</button>
+                            </div>
+
+                            <!-- Formulário de Cadastro Rápido -->
+                            <form id="form-cadastro-rapido" class="auth-form-body">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="cad-nome">Seu Nome Completo *</label>
+                                        <input type="text" id="cad-nome" placeholder="Ex: Lucas Silva" required>
                                     </div>
-                                    <div class="input-group">
-                                        <label for="novo-email">E-mail</label>
-                                        <input type="email" id="novo-email" placeholder="joao@email.com">
+                                    <div class="form-group">
+                                        <label for="cad-telefone">WhatsApp / Telefone *</label>
+                                        <input type="tel" id="cad-telefone" placeholder="(11) 99999-8888" required>
                                     </div>
                                 </div>
-                            </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="cad-email">E-mail *</label>
+                                        <input type="email" id="cad-email" placeholder="seu@email.com" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cad-senha">Criar Senha de Acesso (mín. 6 caracteres) *</label>
+                                        <input type="password" id="cad-senha" placeholder="••••••••" minlength="6" required>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <!-- Formulário de Login Rápido -->
+                            <form id="form-login-rapido" class="auth-form-body" style="display: none;">
+                                <div class="form-group">
+                                    <label for="login-quick-email">Seu E-mail *</label>
+                                    <input type="email" id="login-quick-email" placeholder="seu@email.com">
+                                </div>
+                                <div class="form-group">
+                                    <label for="login-quick-senha">Sua Senha *</label>
+                                    <input type="password" id="login-quick-senha" placeholder="••••••••">
+                                </div>
+                            </form>
                         </div>
 
-                        <!-- Passo 4: Data e Hora -->
-                        <div class="form-step">
-                            <div class="step-label">
-                                <span class="step-number">4</span>
-                                <span>Data e Horário</span>
-                            </div>
-                            <div class="input-group">
-                                <label for="input-data-hora">Escolha a data e o horário desejado</label>
-                                <input type="datetime-local" id="input-data-hora" required>
-                            </div>
+                        <div class="wizard-footer-nav">
+                            <button type="button" class="btn btn-ghost" id="btn-prev-step-4">
+                                ← Voltar ao Horário
+                            </button>
+                            <button type="button" class="btn btn-primary btn-lg" id="btn-confirmar-agendamento">
+                                <span id="btn-confirmar-texto">Confirmar Agendamento</span>
+                                <span class="spinner" id="btn-confirmar-spinner" style="display: none;"></span>
+                            </button>
                         </div>
+                    </div>
 
-                        <button type="submit" id="btn-submit-booking" class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: 1.1rem;">
-                            Confirmar Agendamento
-                        </button>
-                    </form>
                 </div>
 
-                <!-- RESUMO LATERAL -->
-                <aside class="summary-panel">
-                    <h3 class="summary-title">
-                        <span>📋</span> Resumo do Agendamento
-                    </h3>
-                    
-                    <div class="summary-item">
-                        <span class="label">Serviço:</span>
-                        <span id="resumo-servico" class="value">Nenhum selecionado</span>
-                    </div>
+                <!-- PAINEL LATERAL: RESUMO INSTANTÂNEO FLUTUANTE (STICKY SUMMARY) -->
+                <aside class="booking-summary-aside">
+                    <div class="summary-card">
+                        <div class="summary-header">
+                            <span class="summary-icon">📋</span>
+                            <h4>Resumo do Agendamento</h4>
+                        </div>
 
-                    <div class="summary-item">
-                        <span class="label">Duração estimada:</span>
-                        <span id="resumo-duracao" class="value">--</span>
-                    </div>
+                        <div class="summary-content">
+                            <div class="summary-row">
+                                <span class="label">Serviço:</span>
+                                <span class="value" id="resumo-servico">Selecione no passo 1</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="label">Duração estimada:</span>
+                                <span class="value" id="resumo-duracao">-- min</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="label">Barbeiro:</span>
+                                <span class="value" id="resumo-barbeiro">Selecione no passo 2</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="label">Data escolhida:</span>
+                                <span class="value" id="resumo-data">Hoje</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="label">Horário:</span>
+                                <span class="value highlight" id="resumo-horario">A escolher</span>
+                            </div>
+                        </div>
 
-                    <div class="summary-item">
-                        <span class="label">Barbeiro:</span>
-                        <span id="resumo-barbeiro" class="value">Nenhum selecionado</span>
-                    </div>
+                        <div class="summary-total-box">
+                            <span class="total-title">Total a pagar:</span>
+                            <span class="total-amount" id="resumo-total">R$ 0,00</span>
+                        </div>
 
-                    <div class="summary-item">
-                        <span class="label">Data & Horário:</span>
-                        <span id="resumo-data" class="value">Não definido</span>
-                    </div>
-
-                    <div class="summary-total">
-                        <span class="total-label">Total:</span>
-                        <span id="resumo-preco" class="total-price">R$ 0,00</span>
+                        <div class="summary-security-note">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            <span>Pagamento realizado no local após o atendimento.</span>
+                        </div>
                     </div>
                 </aside>
+
             </div>
         </div>
     </section>
 
-    <!-- MODAL DE CONFIRMAÇÃO DO AGENDAMENTO -->
-    <div id="modal-confirmacao" class="modal-overlay" style="display: none;">
-        <div class="modal-card">
-            <div class="modal-icon">✂</div>
-            <h3 class="modal-title">Agendamento Confirmado!</h3>
-            <p class="modal-subtitle">Seu horário na <strong>Tenorio's Barber</strong> foi reservado com sucesso.</p>
+    <!-- MODAL DE SUCESSO / TICKET DE CONFIRMAÇÃO -->
+    <div id="modal-sucesso" class="modal-backdrop" style="display: none;">
+        <div class="modal-card ticket-card">
+            <div class="ticket-header">
+                <div class="ticket-badge-check">✓</div>
+                <h3>Horário Reservado!</h3>
+                <p>Seu agendamento foi confirmado com sucesso na Tenorio's Barber.</p>
+            </div>
 
-            <div class="modal-details">
-                <div class="modal-row">
-                    <span>Protocolo:</span>
-                    <strong id="modal-protocolo">#0</strong>
+            <div class="ticket-body">
+                <div class="ticket-row">
+                    <span class="t-label">Protocolo:</span>
+                    <strong class="t-value" id="ticket-protocolo">#0000</strong>
                 </div>
-                <div class="modal-row">
-                    <span>Cliente:</span>
-                    <strong id="modal-cliente">--</strong>
+                <div class="ticket-row">
+                    <span class="t-label">Cliente:</span>
+                    <strong class="t-value" id="ticket-cliente">--</strong>
                 </div>
-                <div class="modal-row">
-                    <span>Serviço:</span>
-                    <strong id="modal-servico">--</strong>
+                <div class="ticket-row">
+                    <span class="t-label">Serviço:</span>
+                    <strong class="t-value" id="ticket-servico">--</strong>
                 </div>
-                <div class="modal-row">
-                    <span>Barbeiro:</span>
-                    <strong id="modal-barbeiro">--</strong>
+                <div class="ticket-row">
+                    <span class="t-label">Profissional:</span>
+                    <strong class="t-value" id="ticket-barbeiro">--</strong>
                 </div>
-                <div class="modal-row">
-                    <span>Data & Hora:</span>
-                    <strong id="modal-data" style="color: var(--blue-accent);">--</strong>
+                <div class="ticket-row">
+                    <span class="t-label">Data e Hora:</span>
+                    <strong class="t-value highlight-cyan" id="ticket-data-hora">--</strong>
                 </div>
-                <div class="modal-row" style="border-top: 1px dashed var(--border-subtle); padding-top: 0.75rem;">
-                    <span>Total Estimado:</span>
-                    <strong id="modal-preco" style="font-size: 1.15rem; color: var(--blue-accent);">R$ 0,00</strong>
+                <div class="ticket-total-row">
+                    <span>Valor Estimado:</span>
+                    <strong id="ticket-valor">R$ 0,00</strong>
                 </div>
             </div>
 
-            <button type="button" id="btn-fechar-modal" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">
-                Concluir
-            </button>
+            <div class="ticket-footer">
+                <p class="ticket-instructions">Chegue com 5 minutos de antecedência. Em caso de imprevisto, você pode cancelar com até 1h de tolerância.</p>
+                <button type="button" class="btn btn-primary w-full" id="btn-concluir-reserva">
+                    Entendido, Obrigado!
+                </button>
+            </div>
         </div>
     </div>
 
+    <!-- MODAL DE LOGIN / AUTENTICAÇÃO ISOLADO -->
+    <div id="modal-auth" class="modal-backdrop" style="display: none;">
+        <div class="modal-card auth-modal-card">
+            <button type="button" class="btn-close-modal" id="btn-fechar-modal-auth" aria-label="Fechar">✕</button>
+            <div class="modal-header-simple">
+                <h3>Acessar sua Conta</h3>
+                <p>Entre para gerenciar seus horários e ter um agendamento mais ágil.</p>
+            </div>
+
+            <form id="form-modal-login" class="form-vertical">
+                <div class="form-group">
+                    <label for="modal-login-email">E-mail</label>
+                    <input type="email" id="modal-login-email" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-login-senha">Senha</label>
+                    <input type="password" id="modal-login-senha" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-full" id="btn-submit-modal-login">
+                    Entrar na Conta
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL MEUS AGENDAMENTOS -->
+    <div id="modal-meus-agendamentos" class="modal-backdrop" style="display: none;">
+        <div class="modal-card modal-lg">
+            <button type="button" class="btn-close-modal" id="btn-fechar-modal-meus-agendamentos" aria-label="Fechar">✕</button>
+            <div class="modal-header-simple">
+                <h3>Meus Agendamentos</h3>
+                <p>Histórico e reservas ativas na Tenorio's Barber.</p>
+            </div>
+
+            <div id="lista-meus-agendamentos" class="my-appointments-list">
+                <!-- Preenchido via JS -->
+                <p class="loading-state">Carregando seus agendamentos...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTAINER DE TOASTS FLUTUANTES -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
     <!-- FOOTER -->
-    <footer>
-        <div class="container">
-            <p>© 2026 Tenorio's Barber. Todos os direitos reservados • Sistema Integrado com Spring Boot REST API.</p>
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div class="footer-brand">
+                <span class="logo">✂ TENORIO'S <span>BARBER</span></span>
+                <p>Excelência e cuidado com o seu estilo pessoal. Sistema moderno de agendamentos integrado com arquitetura Spring Boot REST.</p>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 Tenorio's Barber. Todos os direitos reservados.</p>
+            </div>
         </div>
     </footer>
-
-    <!-- CONTAINER DE NOTIFICAÇÕES (TOASTS) -->
-    <div id="toast-container" class="toast-container"></div>
 
     <!-- SCRIPTS -->
     <script src="js/api.js"></script>
