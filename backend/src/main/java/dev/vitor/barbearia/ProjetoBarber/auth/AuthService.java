@@ -1,7 +1,5 @@
 package dev.vitor.barbearia.ProjetoBarber.auth;
 
-import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroDTO;
-import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroService;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteDTO;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteService;
 import dev.vitor.barbearia.ProjetoBarber.exceptions.BusinessRuleException;
@@ -25,7 +23,6 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
     private final ClienteService clienteService;
-    private final BarbeiroService barbeiroService;
 
     @Transactional
     public LoginResponseDTO registrar(RegistroDTO dto) {
@@ -33,27 +30,20 @@ public class AuthService {
             throw new BusinessRuleException("Já existe um usuário cadastrado com este e-mail.");
         }
 
+        // Regra de Segurança: Todo usuário que se cadastra publicamente é estritamente ROLE_CLIENTE por padrão
         UsuarioModel usuario = UsuarioModel.builder()
                 .nome(dto.nome())
                 .email(dto.email())
                 .senha(passwordEncoder.encode(dto.senha()))
-                .role(dto.role())
+                .role(Role.ROLE_CLIENTE)
                 .ativo(true)
                 .build();
 
         UsuarioModel salvo = usuarioRepository.save(usuario);
 
-        // Se for cadastrado como CLIENTE, sincroniza com ClienteModel
-        if (dto.role() == Role.ROLE_CLIENTE) {
-            String telefone = dto.telefone() != null ? dto.telefone() : "11999999999";
-            clienteService.criar(new ClienteDTO(dto.nome(), telefone, dto.email()));
-        }
-
-        // Se for cadastrado como BARBEIRO, sincroniza com BarbeiroModel
-        if (dto.role() == Role.ROLE_BARBEIRO) {
-            String telefone = dto.telefone() != null ? dto.telefone() : "11999999999";
-            barbeiroService.criar(new BarbeiroDTO(dto.nome(), dto.email(), telefone));
-        }
+        // Sincroniza entidade ClienteModel
+        String telefone = dto.telefone() != null ? dto.telefone() : "11999999999";
+        clienteService.criar(new ClienteDTO(dto.nome(), telefone, dto.email()));
 
         String token = tokenService.gerarToken(salvo);
         return new LoginResponseDTO(token, salvo.getId(), salvo.getNome(), salvo.getEmail(), salvo.getRole());

@@ -18,13 +18,13 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/barbeiro")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('BARBEIRO')")
 public class BarbeiroAgendaController {
 
     private final AgendamentoService agendamentoService;
     private final AgendamentoMapper agendamentoMapper;
 
     @GetMapping("/minha-agenda")
+    @PreAuthorize("hasRole('BARBEIRO')")
     public ResponseEntity<Page<AgendamentoResponseDTO>> minhaAgenda(
             @AuthenticationPrincipal UserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable) {
@@ -33,20 +33,30 @@ public class BarbeiroAgendaController {
     }
 
     @PatchMapping("/agendamentos/{id}/alterar-horario")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
     public ResponseEntity<AgendamentoResponseDTO> alterarHorario(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody @Valid AlterarHorarioDTO dto) {
-        AgendamentoModel atualizado = agendamentoService.alterarHorarioPeloBarbeiro(id, userDetails.getUsername(), dto);
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+
+        AgendamentoModel atualizado = agendamentoService.alterarHorarioPeloBarbeiroOuGestor(
+                id, userDetails.getUsername(), isGestor, dto);
         return ResponseEntity.ok(agendamentoMapper.toResponseDTO(atualizado));
     }
 
     @PatchMapping("/agendamentos/{id}/cancelar")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
     public ResponseEntity<AgendamentoResponseDTO> cancelarAgendamento(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody @Valid CancelarAgendamentoBarbeiroDTO dto) {
-        AgendamentoModel cancelado = agendamentoService.cancelarPeloBarbeiro(id, userDetails.getUsername(), dto);
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+
+        AgendamentoModel cancelado = agendamentoService.cancelarPeloBarbeiroOuGestor(
+                id, userDetails.getUsername(), isGestor, dto);
         return ResponseEntity.ok(agendamentoMapper.toResponseDTO(cancelado));
     }
 }

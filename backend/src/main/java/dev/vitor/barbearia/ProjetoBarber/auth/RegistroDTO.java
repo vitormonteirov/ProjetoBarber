@@ -1,9 +1,7 @@
 package dev.vitor.barbearia.ProjetoBarber.auth;
 
-import dev.vitor.barbearia.ProjetoBarber.usuario.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record RegistroDTO(
@@ -18,8 +16,5 @@ public record RegistroDTO(
     @Size(min = 6, message = "A senha deve conter pelo menos 6 caracteres.")
     String senha,
 
-    String telefone,
-
-    @NotNull(message = "O perfil (role) é obrigatório.")
-    Role role
+    String telefone
 ) {}

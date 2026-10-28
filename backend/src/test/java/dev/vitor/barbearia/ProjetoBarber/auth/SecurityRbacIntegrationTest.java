@@ -1,5 +1,7 @@
 package dev.vitor.barbearia.ProjetoBarber.auth;
 
+import dev.vitor.barbearia.ProjetoBarber.gestor.CriarBarbeiroUserDTO;
+import dev.vitor.barbearia.ProjetoBarber.gestor.GestorBarbeiroService;
 import dev.vitor.barbearia.ProjetoBarber.usuario.Role;
 import dev.vitor.barbearia.ProjetoBarber.usuario.UsuarioModel;
 import dev.vitor.barbearia.ProjetoBarber.usuario.UsuarioRepository;
@@ -19,6 +21,9 @@ class SecurityRbacIntegrationTest {
     private AuthService authService;
 
     @Autowired
+    private GestorBarbeiroService gestorBarbeiroService;
+
+    @Autowired
     private UsuarioRepository usuarioRepository;
 
     @Autowired
@@ -30,14 +35,13 @@ class SecurityRbacIntegrationTest {
     }
 
     @Test
-    @DisplayName("Deve registrar cliente e permitir login retornando Bearer JWT com role correta")
-    void deveRegistrarELogarComSucesso() {
+    @DisplayName("Todo usuário que criar conta no sistema deve ser CLIENTE por padrão")
+    void deveRegistrarUsuarioComoClientePorPadrao() {
         RegistroDTO registro = new RegistroDTO(
                 "Cliente Teste",
                 "cliente.teste@barber.com",
                 "senha123",
-                "11987654321",
-                Role.ROLE_CLIENTE
+                "11987654321"
         );
 
         LoginResponseDTO responseRegistro = authService.registrar(registro);
@@ -54,40 +58,43 @@ class SecurityRbacIntegrationTest {
     }
 
     @Test
-    @DisplayName("Deve registrar gestor com sucesso e validar hashing de senha BCrypt")
-    void deveRegistrarGestorEValidarBCrypt() {
-        RegistroDTO registro = new RegistroDTO(
-                "Gestor Master",
-                "gestor@barber.com",
-                "senhaForte456",
-                "11999998888",
-                Role.ROLE_GESTOR
-        );
-
-        LoginResponseDTO response = authService.registrar(registro);
-
-        assertNotNull(response.token());
-        assertEquals(Role.ROLE_GESTOR, response.role());
-
-        UsuarioModel usuarioSalvo = usuarioRepository.findByEmail("gestor@barber.com").orElseThrow();
-        assertNotEquals("senhaForte456", usuarioSalvo.getSenha());
-        assertTrue(passwordEncoder.matches("senhaForte456", usuarioSalvo.getSenha()));
-    }
-
-    @Test
-    @DisplayName("Deve registrar barbeiro com sucesso e associar perfil ROLE_BARBEIRO")
-    void deveRegistrarBarbeiro() {
-        RegistroDTO registro = new RegistroDTO(
+    @DisplayName("Role BARBEIRO deve ser criada única e exclusivamente pelo Gestor")
+    void gestorDeveCriarUsuarioComRoleBarbeiro() {
+        CriarBarbeiroUserDTO dto = new CriarBarbeiroUserDTO(
                 "Carlos Barbeiro",
                 "carlos@barber.com",
                 "barber123",
-                "11977776666",
-                Role.ROLE_BARBEIRO
+                "11977776666"
         );
 
-        LoginResponseDTO response = authService.registrar(registro);
+        var response = gestorBarbeiroService.cadastrarBarbeiroComAcesso(dto);
 
-        assertNotNull(response.token());
-        assertEquals(Role.ROLE_BARBEIRO, response.role());
+        assertNotNull(response.id());
+        assertEquals("Carlos Barbeiro", response.nome());
+
+        UsuarioModel usuarioSalvo = usuarioRepository.findByEmail("carlos@barber.com").orElseThrow();
+        assertEquals(Role.ROLE_BARBEIRO, usuarioSalvo.getRole());
+
+        // Valida que o barbeiro consegue fazer login com as credenciais criadas pelo gestor
+        LoginDTO login = new LoginDTO("carlos@barber.com", "barber123");
+        LoginResponseDTO loginResponse = authService.login(login);
+        assertEquals(Role.ROLE_BARBEIRO, loginResponse.role());
+    }
+
+    @Test
+    @DisplayName("Deve validar hashing de senha BCrypt para usuários")
+    void deveValidarHashingBCrypt() {
+        RegistroDTO registro = new RegistroDTO(
+                "Usuario Seguro",
+                "seguro@barber.com",
+                "senhaForte456",
+                "11999998888"
+        );
+
+        authService.registrar(registro);
+
+        UsuarioModel usuarioSalvo = usuarioRepository.findByEmail("seguro@barber.com").orElseThrow();
+        assertNotEquals("senhaForte456", usuarioSalvo.getSenha());
+        assertTrue(passwordEncoder.matches("senhaForte456", usuarioSalvo.getSenha()));
     }
 }

@@ -1,5 +1,6 @@
 package dev.vitor.barbearia.ProjetoBarber.agendamento;
 
+import dev.vitor.barbearia.ProjetoBarber.barbeiro.AlterarHorarioDTO;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroModel;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroService;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteModel;
@@ -50,13 +51,13 @@ class AgendamentoServiceTest {
     @BeforeEach
     void setUp() {
         cliente = ClienteModel.builder().id(1L).nome("João").ativo(true).build();
-        barbeiro = BarbeiroModel.builder().id(1L).nome("Carlos").ativo(true).build();
+        barbeiro = BarbeiroModel.builder().id(1L).nome("Carlos").email("carlos@barber.com").ativo(true).build();
         servico = ServicoModel.builder().id(1L).nome("Corte Degrade").duracaoMinutos(40).preco(new BigDecimal("45.00")).ativo(true).build();
         horarioFuturo = LocalDateTime.now().plusDays(1).withHour(14).withMinute(0);
     }
 
     @Test
-    @DisplayName("Deve agendar com sucesso quando todas as regras forem satisfeitas")
+    @DisplayName("Deve agendar com sucesso para cliente cadastrado")
     void deveAgendarComSucesso() {
         AgendamentoDTO dto = new AgendamentoDTO(1L, 1L, 1L, horarioFuturo);
 
@@ -74,6 +75,50 @@ class AgendamentoServiceTest {
         assertEquals(new BigDecimal("45.00"), resultado.getPreco());
         assertEquals(horarioFuturo.plusMinutes(40), resultado.getDataHoraFim());
         verify(agendamentoRepository, times(1)).save(any(AgendamentoModel.class));
+    }
+
+    @Test
+    @DisplayName("Deve agendar para cliente não cadastrado (não usuário) informando nome e telefone")
+    void deveAgendarParaNaoUsuario() {
+        AgendamentoDTO dto = new AgendamentoDTO(null, 1L, 1L, horarioFuturo, "Marcos Avulso", "11988887777");
+
+        when(barbeiroService.buscarPorId(1L)).thenReturn(Optional.of(barbeiro));
+        when(servicoService.buscarPorId(1L)).thenReturn(Optional.of(servico));
+        when(agendamentoRepository.existsConflitoHorarioBarbeiro(eq(1L), eq(horarioFuturo), any(), eq(StatusAgendamento.AGENDADO))).thenReturn(false);
+        when(agendamentoRepository.save(any(AgendamentoModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AgendamentoModel resultado = agendamentoService.agendar(dto);
+
+        assertNotNull(resultado);
+        assertNull(resultado.getCliente());
+        assertEquals("Marcos Avulso", resultado.getNomeNaoUsuario());
+        assertEquals("11988887777", resultado.getTelefoneNaoUsuario());
+        verify(clienteService, never()).buscarPorId(any());
+    }
+
+    @Test
+    @DisplayName("Gestor pode alterar horário de qualquer barbeiro")
+    void gestorPodeAlterarHorarioDeQualquerBarbeiro() {
+        AgendamentoModel agendamento = AgendamentoModel.builder()
+                .id(5L)
+                .barbeiro(barbeiro)
+                .dataHora(horarioFuturo)
+                .dataHoraFim(horarioFuturo.plusMinutes(30))
+                .status(StatusAgendamento.AGENDADO)
+                .build();
+
+        LocalDateTime novoHorario = horarioFuturo.plusHours(2);
+        AlterarHorarioDTO dto = new AlterarHorarioDTO(novoHorario, "Cliente solicitou via WhatsApp");
+
+        when(agendamentoRepository.findById(5L)).thenReturn(Optional.of(agendamento));
+        when(agendamentoRepository.existsConflitoHorarioBarbeiroIgnorandoId(eq(1L), eq(novoHorario), any(), eq(StatusAgendamento.AGENDADO), eq(5L))).thenReturn(false);
+        when(agendamentoRepository.save(any(AgendamentoModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AgendamentoModel resultado = agendamentoService.alterarHorarioPeloBarbeiroOuGestor(
+                5L, "gestor@tenoriosbarber.com", true, dto);
+
+        assertEquals(novoHorario, resultado.getDataHora());
+        assertTrue(resultado.getNotaAlteracao().contains("Alterado pelo Gestor"));
     }
 
     @Test

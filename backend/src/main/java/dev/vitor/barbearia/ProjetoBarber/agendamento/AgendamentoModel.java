@@ -23,7 +23,7 @@ public class AgendamentoModel {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cliente_id", nullable = false)
+    @JoinColumn(name = "cliente_id", nullable = true)
     private ClienteModel cliente;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -49,4 +49,10 @@ public class AgendamentoModel {
 
     @Column(name = "nota_alteracao", length = 500)
     private String notaAlteracao;
+
+    @Column(name = "nome_nao_usuario", length = 255)
+    private String nomeNaoUsuario;
+
+    @Column(name = "telefone_nao_usuario", length = 50)
+    private String telefoneNaoUsuario;
 }

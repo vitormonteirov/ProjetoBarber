@@ -49,18 +49,30 @@ public class AgendamentoService {
 
     @Transactional
     public AgendamentoModel agendar(AgendamentoDTO dto) {
-        ClienteModel cliente = clienteService.buscarPorId(dto.clienteId())
-                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com ID: " + dto.clienteId()));
-        if (Boolean.FALSE.equals(cliente.getAtivo())) {
-            throw new BusinessRuleException("Não é possível agendar para um cliente inativo.");
+        ClienteModel cliente = null;
+
+        // Se informou clienteId, carrega e valida o cliente cadastrado
+        if (dto.clienteId() != null) {
+            cliente = clienteService.buscarPorId(dto.clienteId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com ID: " + dto.clienteId()));
+            if (Boolean.FALSE.equals(cliente.getAtivo())) {
+                throw new BusinessRuleException("Não é possível agendar para um cliente inativo.");
+            }
+        } else {
+            // Se for um não usuário (reserva avulsa feita pelo Gestor), valida dados mínimos
+            if (dto.nomeNaoUsuario() == null || dto.nomeNaoUsuario().isBlank()) {
+                throw new BusinessRuleException("Para reservas de clientes não cadastrados, o nome do cliente deve ser informado.");
+            }
         }
 
+        // Validação e carregamento do Barbeiro
         BarbeiroModel barbeiro = barbeiroService.buscarPorId(dto.barbeiroId())
                 .orElseThrow(() -> new ResourceNotFoundException("Barbeiro não encontrado com ID: " + dto.barbeiroId()));
         if (Boolean.FALSE.equals(barbeiro.getAtivo())) {
             throw new BusinessRuleException("O barbeiro selecionado está inativo.");
         }
 
+        // Resolução de Serviço, Preço e Duração
         ServicoModel servico = null;
         int duracaoMinutos = 30;
         BigDecimal preco = null;
@@ -78,16 +90,20 @@ public class AgendamentoService {
         LocalDateTime inicio = dto.dataHora();
         LocalDateTime fim = inicio.plusMinutes(duracaoMinutos);
 
-        LocalDateTime inicioDia = dto.dataHora().toLocalDate().atStartOfDay();
-        LocalDateTime fimDia = dto.dataHora().toLocalDate().atTime(23, 59, 59);
+        // Regra 1: Limite diário de agendamento por dia do cliente com o mesmo barbeiro (apenas para cliente cadastrado)
+        if (cliente != null) {
+            LocalDateTime inicioDia = dto.dataHora().toLocalDate().atStartOfDay();
+            LocalDateTime fimDia = dto.dataHora().toLocalDate().atTime(23, 59, 59);
 
-        boolean clienteJaAgendadoHoje = agendamentoRepository.existsByClienteIdAndBarbeiroIdAndDiaLimit(
-                dto.clienteId(), dto.barbeiroId(), inicioDia, fimDia, StatusAgendamento.AGENDADO);
+            boolean clienteJaAgendadoHoje = agendamentoRepository.existsByClienteIdAndBarbeiroIdAndDiaLimit(
+                    cliente.getId(), dto.barbeiroId(), inicioDia, fimDia, StatusAgendamento.AGENDADO);
 
-        if (clienteJaAgendadoHoje) {
-            throw new BusinessRuleException("Cliente já possui um agendamento marcado para este dia com este barbeiro.");
+            if (clienteJaAgendadoHoje) {
+                throw new BusinessRuleException("Cliente já possui um agendamento marcado para este dia com este barbeiro.");
+            }
         }
 
+        // Regra 2: Barbeiro não pode ter agendamentos conflitantes no intervalo (Double Booking prevention)
         boolean conflitoHorario = agendamentoRepository.existsConflitoHorarioBarbeiro(
                 dto.barbeiroId(), inicio, fim, StatusAgendamento.AGENDADO);
 
@@ -103,6 +119,8 @@ public class AgendamentoService {
                 .dataHoraFim(fim)
                 .preco(preco)
                 .status(StatusAgendamento.AGENDADO)
+                .nomeNaoUsuario(dto.nomeNaoUsuario())
+                .telefoneNaoUsuario(dto.telefoneNaoUsuario())
                 .build();
 
         return agendamentoRepository.save(agendamento);
@@ -127,11 +145,11 @@ public class AgendamentoService {
     }
 
     @Transactional
-    public AgendamentoModel alterarHorarioPeloBarbeiro(Long agendamentoId, String emailBarbeiro, AlterarHorarioDTO dto) {
+    public AgendamentoModel alterarHorarioPeloBarbeiroOuGestor(Long agendamentoId, String emailSolicitante, boolean isGestor, AlterarHorarioDTO dto) {
         AgendamentoModel agendamento = agendamentoRepository.findById(agendamentoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado com ID: " + agendamentoId));
 
-        if (!agendamento.getBarbeiro().getEmail().equalsIgnoreCase(emailBarbeiro)) {
+        if (!isGestor && !agendamento.getBarbeiro().getEmail().equalsIgnoreCase(emailSolicitante)) {
             throw new BusinessRuleException("Você só pode alterar agendamentos da sua própria agenda.");
         }
 
@@ -150,19 +168,20 @@ public class AgendamentoService {
             throw new BusinessRuleException("Conflito de horário na nova data selecionada para o barbeiro.");
         }
 
+        String papel = isGestor ? "Gestor" : "Barbeiro";
         agendamento.setDataHora(novoInicio);
         agendamento.setDataHoraFim(novoFim);
-        agendamento.setNotaAlteracao("Alterado pelo Barbeiro: " + dto.notaAlteracao());
+        agendamento.setNotaAlteracao("Alterado pelo " + papel + " (" + emailSolicitante + "): " + dto.notaAlteracao());
 
         return agendamentoRepository.save(agendamento);
     }
 
     @Transactional
-    public AgendamentoModel cancelarPeloBarbeiro(Long agendamentoId, String emailBarbeiro, CancelarAgendamentoBarbeiroDTO dto) {
+    public AgendamentoModel cancelarPeloBarbeiroOuGestor(Long agendamentoId, String emailSolicitante, boolean isGestor, CancelarAgendamentoBarbeiroDTO dto) {
         AgendamentoModel agendamento = agendamentoRepository.findById(agendamentoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado com ID: " + agendamentoId));
 
-        if (!agendamento.getBarbeiro().getEmail().equalsIgnoreCase(emailBarbeiro)) {
+        if (!isGestor && !agendamento.getBarbeiro().getEmail().equalsIgnoreCase(emailSolicitante)) {
             throw new BusinessRuleException("Você só pode cancelar agendamentos da sua própria agenda.");
         }
 
@@ -170,8 +189,9 @@ public class AgendamentoService {
             throw new BusinessRuleException("Este agendamento já se encontra cancelado.");
         }
 
+        String papel = isGestor ? "Gestor" : "Barbeiro";
         agendamento.setStatus(StatusAgendamento.CANCELADO);
-        agendamento.setNotaAlteracao("Cancelado pelo Barbeiro. Motivo: " + dto.motivo());
+        agendamento.setNotaAlteracao("Cancelado pelo " + papel + ". Motivo: " + dto.motivo());
 
         return agendamentoRepository.save(agendamento);
     }
@@ -215,7 +235,7 @@ public class AgendamentoService {
                 horariosLivres.add(slot);
             }
 
-            slot = slot.plusMinutes(30); // Incremento de 30 minutos na grade
+            slot = slot.plusMinutes(30);
         }
 
         return horariosLivres;
