@@ -31,6 +31,11 @@ public class BarbeiroService {
     }
 
     @Transactional
+    public Optional<BarbeiroModel> buscarPorIdComLock(Long id) {
+        return barbeiroRepository.findByIdWithLock(id);
+    }
+
+    @Transactional
     public BarbeiroModel criar(BarbeiroDTO dto) {
         BarbeiroModel barbeiro = BarbeiroModel.builder()
                 .nome(dto.nome())

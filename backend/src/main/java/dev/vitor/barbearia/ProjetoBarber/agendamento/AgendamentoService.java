@@ -1,5 +1,7 @@
 package dev.vitor.barbearia.ProjetoBarber.agendamento;
 
+import dev.vitor.barbearia.ProjetoBarber.agendamento.event.AgendamentoCanceladoEvent;
+import dev.vitor.barbearia.ProjetoBarber.agendamento.event.AgendamentoCriadoEvent;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.AlterarHorarioDTO;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroModel;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroService;
@@ -11,6 +13,7 @@ import dev.vitor.barbearia.ProjetoBarber.exceptions.ResourceNotFoundException;
 import dev.vitor.barbearia.ProjetoBarber.servico.ServicoModel;
 import dev.vitor.barbearia.ProjetoBarber.servico.ServicoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,7 @@ public class AgendamentoService {
     private final ClienteService clienteService;
     private final BarbeiroService barbeiroService;
     private final ServicoService servicoService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public Page<AgendamentoModel> listarTodos(Pageable pageable) {
@@ -65,8 +69,8 @@ public class AgendamentoService {
             }
         }
 
-        // Validação e carregamento do Barbeiro
-        BarbeiroModel barbeiro = barbeiroService.buscarPorId(dto.barbeiroId())
+        // Validação e bloqueio pessimista do Barbeiro para evitar concorrência e double booking
+        BarbeiroModel barbeiro = barbeiroService.buscarPorIdComLock(dto.barbeiroId())
                 .orElseThrow(() -> new ResourceNotFoundException("Barbeiro não encontrado com ID: " + dto.barbeiroId()));
         if (Boolean.FALSE.equals(barbeiro.getAtivo())) {
             throw new BusinessRuleException("O barbeiro selecionado está inativo.");
@@ -123,7 +127,9 @@ public class AgendamentoService {
                 .telefoneNaoUsuario(dto.telefoneNaoUsuario())
                 .build();
 
-        return agendamentoRepository.save(agendamento);
+        AgendamentoModel salvo = agendamentoRepository.save(agendamento);
+        eventPublisher.publishEvent(new AgendamentoCriadoEvent(salvo));
+        return salvo;
     }
 
     @Transactional
@@ -141,7 +147,9 @@ public class AgendamentoService {
         }
 
         agendamento.setStatus(StatusAgendamento.CANCELADO);
-        return agendamentoRepository.save(agendamento);
+        AgendamentoModel salvo = agendamentoRepository.save(agendamento);
+        eventPublisher.publishEvent(new AgendamentoCanceladoEvent(salvo));
+        return salvo;
     }
 
     @Transactional
@@ -156,6 +164,9 @@ public class AgendamentoService {
         if (agendamento.getStatus() != StatusAgendamento.AGENDADO) {
             throw new BusinessRuleException("Apenas agendamentos com status AGENDADO podem ter o horário alterado.");
         }
+
+        // Lock pessimista na agenda do barbeiro para evitar sobreposições concorrentes
+        barbeiroService.buscarPorIdComLock(agendamento.getBarbeiro().getId());
 
         int duracao = agendamento.getServico() != null ? agendamento.getServico().getDuracaoMinutos() : 30;
         LocalDateTime novoInicio = dto.novaDataHora();
@@ -193,7 +204,9 @@ public class AgendamentoService {
         agendamento.setStatus(StatusAgendamento.CANCELADO);
         agendamento.setNotaAlteracao("Cancelado pelo " + papel + ". Motivo: " + dto.motivo());
 
-        return agendamentoRepository.save(agendamento);
+        AgendamentoModel salvo = agendamentoRepository.save(agendamento);
+        eventPublisher.publishEvent(new AgendamentoCanceladoEvent(salvo));
+        return salvo;
     }
 
     @Transactional(readOnly = true)

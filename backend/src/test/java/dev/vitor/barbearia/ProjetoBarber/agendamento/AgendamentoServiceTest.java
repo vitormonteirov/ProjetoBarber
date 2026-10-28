@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -40,6 +41,9 @@ class AgendamentoServiceTest {
     @Mock
     private ServicoService servicoService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private AgendamentoService agendamentoService;
 
@@ -57,12 +61,12 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve agendar com sucesso para cliente cadastrado")
+    @DisplayName("Deve agendar com sucesso para cliente cadastrado e emitir evento assíncrono")
     void deveAgendarComSucesso() {
         AgendamentoDTO dto = new AgendamentoDTO(1L, 1L, 1L, horarioFuturo);
 
         when(clienteService.buscarPorId(1L)).thenReturn(Optional.of(cliente));
-        when(barbeiroService.buscarPorId(1L)).thenReturn(Optional.of(barbeiro));
+        when(barbeiroService.buscarPorIdComLock(1L)).thenReturn(Optional.of(barbeiro));
         when(servicoService.buscarPorId(1L)).thenReturn(Optional.of(servico));
         when(agendamentoRepository.existsByClienteIdAndBarbeiroIdAndDiaLimit(eq(1L), eq(1L), any(), any(), eq(StatusAgendamento.AGENDADO))).thenReturn(false);
         when(agendamentoRepository.existsConflitoHorarioBarbeiro(eq(1L), eq(horarioFuturo), any(), eq(StatusAgendamento.AGENDADO))).thenReturn(false);
@@ -75,6 +79,7 @@ class AgendamentoServiceTest {
         assertEquals(new BigDecimal("45.00"), resultado.getPreco());
         assertEquals(horarioFuturo.plusMinutes(40), resultado.getDataHoraFim());
         verify(agendamentoRepository, times(1)).save(any(AgendamentoModel.class));
+        verify(eventPublisher, times(1)).publishEvent(any(Object.class));
     }
 
     @Test
@@ -82,7 +87,7 @@ class AgendamentoServiceTest {
     void deveAgendarParaNaoUsuario() {
         AgendamentoDTO dto = new AgendamentoDTO(null, 1L, 1L, horarioFuturo, "Marcos Avulso", "11988887777");
 
-        when(barbeiroService.buscarPorId(1L)).thenReturn(Optional.of(barbeiro));
+        when(barbeiroService.buscarPorIdComLock(1L)).thenReturn(Optional.of(barbeiro));
         when(servicoService.buscarPorId(1L)).thenReturn(Optional.of(servico));
         when(agendamentoRepository.existsConflitoHorarioBarbeiro(eq(1L), eq(horarioFuturo), any(), eq(StatusAgendamento.AGENDADO))).thenReturn(false);
         when(agendamentoRepository.save(any(AgendamentoModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -94,6 +99,7 @@ class AgendamentoServiceTest {
         assertEquals("Marcos Avulso", resultado.getNomeNaoUsuario());
         assertEquals("11988887777", resultado.getTelefoneNaoUsuario());
         verify(clienteService, never()).buscarPorId(any());
+        verify(eventPublisher, times(1)).publishEvent(any(Object.class));
     }
 
     @Test
@@ -111,6 +117,7 @@ class AgendamentoServiceTest {
         AlterarHorarioDTO dto = new AlterarHorarioDTO(novoHorario, "Cliente solicitou via WhatsApp");
 
         when(agendamentoRepository.findById(5L)).thenReturn(Optional.of(agendamento));
+        when(barbeiroService.buscarPorIdComLock(1L)).thenReturn(Optional.of(barbeiro));
         when(agendamentoRepository.existsConflitoHorarioBarbeiroIgnorandoId(eq(1L), eq(novoHorario), any(), eq(StatusAgendamento.AGENDADO), eq(5L))).thenReturn(false);
         when(agendamentoRepository.save(any(AgendamentoModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -127,7 +134,7 @@ class AgendamentoServiceTest {
         AgendamentoDTO dto = new AgendamentoDTO(1L, 1L, 1L, horarioFuturo);
 
         when(clienteService.buscarPorId(1L)).thenReturn(Optional.of(cliente));
-        when(barbeiroService.buscarPorId(1L)).thenReturn(Optional.of(barbeiro));
+        when(barbeiroService.buscarPorIdComLock(1L)).thenReturn(Optional.of(barbeiro));
         when(servicoService.buscarPorId(1L)).thenReturn(Optional.of(servico));
         when(agendamentoRepository.existsByClienteIdAndBarbeiroIdAndDiaLimit(eq(1L), eq(1L), any(), any(), eq(StatusAgendamento.AGENDADO))).thenReturn(false);
         when(agendamentoRepository.existsConflitoHorarioBarbeiro(eq(1L), eq(horarioFuturo), any(), eq(StatusAgendamento.AGENDADO))).thenReturn(true);
