@@ -41,6 +41,7 @@ public class SecurityConfigurations {
                 .authorizeHttpRequests(req -> {
                     // Console H2 e Swagger/Docs caso aplicável
                     req.requestMatchers("/h2-console/**").permitAll();
+                    req.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
 
                     // Autenticação e Registro
                     req.requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll();

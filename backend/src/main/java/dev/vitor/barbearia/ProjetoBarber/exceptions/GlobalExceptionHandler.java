@@ -1,68 +1,67 @@
 package dev.vitor.barbearia.ProjetoBarber.exceptions;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.ProblemDetail;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
+import java.net.URI;
+import java.time.Instant;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleValidationExceptions(MethodArgumentNotValidException ex) {
+    public ProblemDetail handleValidationExceptions(MethodArgumentNotValidException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST, "Um ou mais campos contêm valores inválidos.");
+        problem.setTitle("Erro de Validação");
+        problem.setType(URI.create("https://barber.dev/errors/validation-error"));
+        problem.setProperty("timestamp", Instant.now());
+
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Erro de Validação");
-        body.put("messages", errors);
-
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+        problem.setProperty("errors", errors);
+        problem.setProperty("message", "Erro de validação nos campos informados.");
+        return problem;
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<Object> handleResourceNotFoundException(ResourceNotFoundException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.NOT_FOUND.value());
-        body.put("error", "Recurso não encontrado");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
+    public ProblemDetail handleResourceNotFoundException(ResourceNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problem.setTitle("Recurso Não Encontrado");
+        problem.setType(URI.create("https://barber.dev/errors/resource-not-found"));
+        problem.setProperty("timestamp", Instant.now());
+        problem.setProperty("message", ex.getMessage());
+        return problem;
     }
 
     @ExceptionHandler({BusinessRuleException.class, IllegalArgumentException.class})
-    public ResponseEntity<Object> handleBusinessRuleException(RuntimeException ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.BAD_REQUEST.value());
-        body.put("error", "Violação de Regra de Negócio");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    public ProblemDetail handleBusinessRuleException(RuntimeException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setTitle("Violação de Regra de Negócio");
+        problem.setType(URI.create("https://barber.dev/errors/business-rule-violation"));
+        problem.setProperty("timestamp", Instant.now());
+        problem.setProperty("message", ex.getMessage());
+        return problem;
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleGenericException(Exception ex) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDateTime.now());
-        body.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        body.put("error", "Erro Interno no Servidor");
-        body.put("message", ex.getMessage());
-
-        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ProblemDetail handleGenericException(Exception ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.INTERNAL_SERVER_ERROR, "Ocorreu um erro interno inesperado no servidor.");
+        problem.setTitle("Erro Interno no Servidor");
+        problem.setType(URI.create("https://barber.dev/errors/internal-server-error"));
+        problem.setProperty("timestamp", Instant.now());
+        problem.setProperty("message", "Ocorreu um erro interno inesperado no servidor.");
+        return problem;
     }
 }

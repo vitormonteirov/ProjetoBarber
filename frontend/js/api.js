@@ -55,10 +55,14 @@ const api = {
             let errorMsg = `Erro na requisição (${response.status})`;
             try {
                 const errJson = await response.json();
-                if (errJson.mensagem) {
+                if (errJson.detail) {
+                    errorMsg = errJson.detail;
+                } else if (errJson.mensagem) {
                     errorMsg = errJson.mensagem;
                 } else if (errJson.message) {
                     errorMsg = errJson.message;
+                } else if (errJson.errors && typeof errJson.errors === 'object') {
+                    errorMsg = Object.values(errJson.errors).join(', ');
                 } else if (errJson.erros && Array.isArray(errJson.erros)) {
                     errorMsg = errJson.erros.join(', ');
                 }
