@@ -4,7 +4,7 @@ Sistema fullstack de alta precisão para a **Tenorio's Barber**, gerenciando age
 
 ## 📁 Estrutura do Repositório (Monorepo)
 
-O projeto segue o padrão de **arquitetura desacoplada** recomendada pelo mercado:
+O projeto segue o padrão de **arquitetura desacoplada**:
 
 ```text
 ProjetoBarber/
