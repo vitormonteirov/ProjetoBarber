@@ -139,6 +139,36 @@ class SecurityHardeningIntegrationTest {
     }
 
     @Test
+    @DisplayName("Proteção BOLA no Agendamento: um cliente não pode criar agendamento passando clienteId de outro cliente")
+    void clienteNaoPodeAgendarEmNomeDeOutroCliente() {
+        ClienteModel vitima = clienteRepository.save(ClienteModel.builder()
+                .nome("Vitima BOLA")
+                .email("vitima.bola@barber.com")
+                .telefone("11911112222")
+                .ativo(true)
+                .build());
+
+        clienteRepository.save(ClienteModel.builder()
+                .nome("Atacante BOLA")
+                .email("atacante.bola@barber.com")
+                .telefone("11933334444")
+                .ativo(true)
+                .build());
+
+        BarbeiroModel barbeiro = barbeiroService.criar(
+                new BarbeiroDTO("Barbeiro BOLA", "barbeiro.bola@barber.com", "11966667777"));
+
+        var dtoMalicioso = new dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoDTO(
+                vitima.getId(),
+                barbeiro.getId(),
+                1L,
+                LocalDateTime.now().plusDays(3).withHour(10).withMinute(0));
+
+        assertThrows(AccessDeniedException.class, () ->
+                agendamentoService.agendar(dtoMalicioso, "atacante.bola@barber.com", false));
+    }
+
+    @Test
     @DisplayName("SecurityFilter deve bloquear imediatamente com HTTP 401 um token JWT válido cujo barbeiro/usuário foi desativado")
     void securityFilterDeveBloquearImediatamenteUsuarioOuBarbeiroDesativado() throws Exception {
         String emailBarbeiro = "barbeiro.revogado@barber.com";
@@ -174,5 +204,94 @@ class SecurityHardeningIntegrationTest {
         assertEquals(401, res.getStatus(), "Token de usuário desativado deve ser rejeitado imediatamente com HTTP 401");
         assertTrue(res.getContentAsString().contains("Sua conta foi desativada ou revogada"));
         verify(chain, never()).doFilter(req, res);
+    }
+
+    @Test
+    @DisplayName("SEC-02: RateLimitingFilter não deve permitir bypass via falsificação de header X-Forwarded-For")
+    void rateLimitingFilterNaoDevePermitirBypassViaXForwardedForSpoofing() throws Exception {
+        FilterChain chain = mock(FilterChain.class);
+        String realAttackerIp = "198.51.100.42";
+
+        for (int i = 1; i <= 15; i++) {
+            MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/auth/login");
+            req.setRemoteAddr(realAttackerIp);
+            req.addHeader("X-Forwarded-For", "10.0.0." + i);
+            MockHttpServletResponse res = new MockHttpServletResponse();
+            rateLimitingFilter.doFilter(req, res, chain);
+            assertEquals(200, res.getStatus());
+        }
+
+        // 16ª tentativa com novo X-Forwarded-For forjado ainda deve ser bloqueada pelo IP real da conexão
+        MockHttpServletRequest spoofedReq = new MockHttpServletRequest("POST", "/api/auth/login");
+        spoofedReq.setRemoteAddr(realAttackerIp);
+        spoofedReq.addHeader("X-Forwarded-For", "10.0.0.250");
+        MockHttpServletResponse spoofedRes = new MockHttpServletResponse();
+        rateLimitingFilter.doFilter(spoofedReq, spoofedRes, chain);
+
+        assertEquals(429, spoofedRes.getStatus(), "Falsificação de X-Forwarded-For não deve burlar o Rate Limit!");
+    }
+
+    @Test
+    @DisplayName("SEC-04: Deve impedir que um cliente atualize seu e-mail para o e-mail já pertencente a outro cliente")
+    void deveImpedirColisaoDeEmailEntreClientes(@Autowired dev.vitor.barbearia.ProjetoBarber.cliente.ClienteService clienteService) {
+        clienteRepository.save(ClienteModel.builder()
+                .nome("Cliente Existente")
+                .email("existente.sec04@barber.com")
+                .telefone("11911110000")
+                .ativo(true)
+                .build());
+
+        ClienteModel outroCliente = clienteRepository.save(ClienteModel.builder()
+                .nome("Outro Cliente")
+                .email("outro.sec04@barber.com")
+                .telefone("11922220000")
+                .ativo(true)
+                .build());
+
+        var dtoColisao = new dev.vitor.barbearia.ProjetoBarber.cliente.ClienteDTO(
+                "Outro Cliente", "11922220000", "existente.sec04@barber.com");
+
+        assertThrows(dev.vitor.barbearia.ProjetoBarber.exceptions.BusinessRuleException.class, () ->
+                clienteService.atualizar(outroCliente.getId(), dtoColisao));
+    }
+
+    @Test
+    @DisplayName("OBS-01: CorrelationIdFilter deve gerar e propagar cabeçalho X-Correlation-Id em cada requisição")
+    void correlationIdFilterDeveGerarEPropagarHeader(@Autowired dev.vitor.barbearia.ProjetoBarber.config.CorrelationIdFilter correlationIdFilter) throws Exception {
+        FilterChain chain = mock(FilterChain.class);
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/servicos");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        correlationIdFilter.doFilter(req, res, chain);
+
+        String generatedId = res.getHeader(dev.vitor.barbearia.ProjetoBarber.config.CorrelationIdFilter.CORRELATION_ID_HEADER);
+        assertNotNull(generatedId, "X-Correlation-Id deve ser gerado automaticamente quando ausente");
+        assertFalse(generatedId.isBlank());
+    }
+
+    @Test
+    @DisplayName("Fase 3 Auth: Deve renovar token JWT de usuário ativo e permitir alteração segura de senha")
+    void deveRenovarSessaoEAlterarSenhaComSucesso(@Autowired dev.vitor.barbearia.ProjetoBarber.auth.AuthService authService) {
+        String email = "fase3.auth@barber.com";
+        usuarioRepository.save(UsuarioModel.builder()
+                .nome("Usuario Fase 3")
+                .email(email)
+                .senha(passwordEncoder.encode("SenhaAntiga123"))
+                .role(Role.ROLE_CLIENTE)
+                .ativo(true)
+                .build());
+
+        var renovado = authService.renovarSessao(email);
+        assertNotNull(renovado.token());
+        assertEquals(email, tokenService.validarToken(renovado.token()));
+
+        // Tentativa com senha atual errada deve falhar
+        assertThrows(dev.vitor.barbearia.ProjetoBarber.exceptions.BusinessRuleException.class, () ->
+                authService.alterarSenha(email, new dev.vitor.barbearia.ProjetoBarber.auth.AlterarSenhaDTO("SenhaErrada", "NovaSenhaForte123")));
+
+        // Alteração com senha atual correta deve atualizar o hash BCrypt
+        authService.alterarSenha(email, new dev.vitor.barbearia.ProjetoBarber.auth.AlterarSenhaDTO("SenhaAntiga123", "NovaSenhaForte123"));
+        UsuarioModel atualizado = usuarioRepository.findByEmail(email).orElseThrow();
+        assertTrue(passwordEncoder.matches("NovaSenhaForte123", atualizado.getSenha()));
     }
 }
