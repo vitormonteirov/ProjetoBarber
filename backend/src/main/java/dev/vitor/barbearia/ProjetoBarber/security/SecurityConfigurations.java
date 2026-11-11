@@ -53,8 +53,12 @@ public class SecurityConfigurations {
 
                     req.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
 
-                    // Autenticação e Registro
-                    req.requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll();
+                    // Observabilidade (Healthcheck / Liveness / Readiness liberados para Docker/Proxy; demais endpoints restritos ao Gestor)
+                    req.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**", "/actuator/info").permitAll();
+                    req.requestMatchers("/actuator/**").hasRole("GESTOR");
+
+                    // Autenticação e Registro Públicos
+                    req.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/registrar").permitAll();
 
                     // Rotas Públicas somente leitura (GET) para consulta de catálogo e disponibilidade
                     req.requestMatchers(HttpMethod.GET, "/api/servicos/**").permitAll();
