@@ -10,7 +10,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "barbeiro")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,6 +20,8 @@ public class BarbeiroModel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String nome;
+
+    @Column(unique = true)
     private String email;
     private String telefone;
 
@@ -51,9 +54,8 @@ public class BarbeiroModel {
     @Column(name = "horario_fim_pausa")
     private LocalTime horarioFimPausa = PAUSA_FIM_PADRAO;
 
-    @OneToMany(mappedBy = "barbeiro", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "barbeiro")
     @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     @JsonIgnore
     private List<AgendamentoModel> agendamentos;
 
