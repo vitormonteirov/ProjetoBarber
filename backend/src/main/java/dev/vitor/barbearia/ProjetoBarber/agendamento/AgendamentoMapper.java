@@ -1,17 +1,11 @@
 package dev.vitor.barbearia.ProjetoBarber.agendamento;
 
-import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class AgendamentoMapper {
 
     public static final int META_SELOS_FIDELIDADE = 10;
-
-    private final AgendamentoRepository agendamentoRepository;
-    private final AtendimentoHistoricoRepository historicoRepository;
 
     public AgendamentoResponseDTO toResponseDTO(AgendamentoModel model) {
         if (model == null) return null;
@@ -32,17 +26,6 @@ public class AgendamentoMapper {
                 ? model.getDuracaoTotalMinutos()
                 : (model.getServico() != null ? model.getServico().getDuracaoMinutos() : 30);
 
-        long totalConcluidos = 0L;
-        long faltasCount = 0L;
-        boolean elegivelFidelidade = false;
-
-        if (!isNaoUsuario && model.getCliente() != null && model.getCliente().getId() != null) {
-            Long clienteId = model.getCliente().getId();
-            totalConcluidos = historicoRepository.countByClienteId(clienteId);
-            faltasCount = agendamentoRepository.countByClienteIdAndStatus(clienteId, StatusAgendamento.NAO_COMPARECEU);
-            elegivelFidelidade = totalConcluidos > 0 && (totalConcluidos % META_SELOS_FIDELIDADE == (META_SELOS_FIDELIDADE - 1) || totalConcluidos % META_SELOS_FIDELIDADE == 0);
-        }
-
         return new AgendamentoResponseDTO(
             model.getId(),
             model.getCliente() != null ? model.getCliente().getId() : null,
@@ -61,9 +44,10 @@ public class AgendamentoMapper {
             isNaoUsuario,
             model.getNomeNaoUsuario(),
             model.getTelefoneNaoUsuario(),
-            totalConcluidos,
-            faltasCount,
-            elegivelFidelidade
+            0L,
+            0L,
+            false
         );
     }
 }
+

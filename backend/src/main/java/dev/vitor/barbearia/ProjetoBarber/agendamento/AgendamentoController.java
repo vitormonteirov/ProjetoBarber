@@ -60,8 +60,13 @@ public class AgendamentoController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('CLIENTE', 'GESTOR')")
-    public ResponseEntity<AgendamentoResponseDTO> agendar(@RequestBody @Valid AgendamentoDTO dto) {
-        AgendamentoModel model = agendamentoService.agendar(dto);
+    public ResponseEntity<AgendamentoResponseDTO> agendar(
+            @RequestBody @Valid AgendamentoDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isGestor = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_GESTOR".equals(a.getAuthority()));
+        String emailSolicitante = userDetails != null ? userDetails.getUsername() : null;
+        AgendamentoModel model = agendamentoService.agendar(dto, emailSolicitante, isGestor);
         return ResponseEntity.status(HttpStatus.CREATED).body(agendamentoMapper.toResponseDTO(model));
     }
 

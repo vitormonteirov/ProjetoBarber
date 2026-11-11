@@ -71,10 +71,38 @@ public class AgendamentoService {
 
     @Transactional
     public AgendamentoModel agendar(AgendamentoDTO dto) {
+        return agendar(dto, null, true);
+    }
+
+    @Transactional
+    public AgendamentoModel agendar(AgendamentoDTO dto, String emailSolicitante, boolean isGestor) {
         ClienteModel cliente = null;
 
-        // Se informou clienteId, carrega e valida o cliente cadastrado
-        if (dto.clienteId() != null) {
+        if (!isGestor) {
+            if (emailSolicitante == null || emailSolicitante.isBlank()) {
+                throw new org.springframework.security.access.AccessDeniedException("Usuário não autenticado.");
+            }
+            cliente = clienteService.buscarPorEmail(emailSolicitante)
+                    .orElseGet(() -> {
+                        if (dto.clienteId() != null) {
+                            ClienteModel porId = clienteService.buscarPorId(dto.clienteId())
+                                    .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com ID: " + dto.clienteId()));
+                            if (porId.getEmail() != null && !porId.getEmail().equalsIgnoreCase(emailSolicitante)) {
+                                throw new org.springframework.security.access.AccessDeniedException(
+                                        "Acesso negado: você só pode criar agendamentos para a sua própria conta.");
+                            }
+                            return porId;
+                        }
+                        throw new ResourceNotFoundException("Perfil de cliente não encontrado para: " + emailSolicitante);
+                    });
+            if (dto.clienteId() != null && !dto.clienteId().equals(cliente.getId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Acesso negado: você só pode criar agendamentos para a sua própria conta.");
+            }
+            if (Boolean.FALSE.equals(cliente.getAtivo())) {
+                throw new BusinessRuleException("Não é possível agendar para um cliente inativo.");
+            }
+        } else if (dto.clienteId() != null) {
             cliente = clienteService.buscarPorId(dto.clienteId())
                     .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com ID: " + dto.clienteId()));
             if (Boolean.FALSE.equals(cliente.getAtivo())) {
@@ -103,32 +131,29 @@ public class AgendamentoService {
             idsServicos.add(dto.servicoId());
         }
 
-        ServicoModel servicoPrincipal = null;
-        int duracaoMinutos = 30;
-        BigDecimal preco = null;
-        String descricaoServicos = null;
-
-        if (!idsServicos.isEmpty()) {
-            List<ServicoModel> servicosSelecionados = new ArrayList<>();
-            for (Long sId : idsServicos) {
-                ServicoModel s = servicoService.buscarPorId(sId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com ID: " + sId));
-                if (Boolean.FALSE.equals(s.getAtivo())) {
-                    throw new BusinessRuleException("O serviço selecionado está inativo: " + s.getNome());
-                }
-                servicosSelecionados.add(s);
-            }
-            servicoPrincipal = servicosSelecionados.get(0);
-            duracaoMinutos = servicosSelecionados.stream()
-                    .mapToInt(s -> s.getDuracaoMinutos() != null ? s.getDuracaoMinutos() : 30)
-                    .sum();
-            preco = servicosSelecionados.stream()
-                    .map(s -> s.getPreco() != null ? s.getPreco() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            descricaoServicos = servicosSelecionados.stream()
-                    .map(ServicoModel::getNome)
-                    .collect(Collectors.joining(" + "));
+        if (idsServicos.isEmpty()) {
+            throw new BusinessRuleException("Selecione pelo menos um serviço para realizar o agendamento.");
         }
+
+        List<ServicoModel> servicosSelecionados = new ArrayList<>();
+        for (Long sId : idsServicos) {
+            ServicoModel s = servicoService.buscarPorId(sId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com ID: " + sId));
+            if (Boolean.FALSE.equals(s.getAtivo())) {
+                throw new BusinessRuleException("O serviço selecionado está inativo: " + s.getNome());
+            }
+            servicosSelecionados.add(s);
+        }
+        ServicoModel servicoPrincipal = servicosSelecionados.get(0);
+        int duracaoMinutos = servicosSelecionados.stream()
+                .mapToInt(s -> s.getDuracaoMinutos() != null ? s.getDuracaoMinutos() : 30)
+                .sum();
+        BigDecimal preco = servicosSelecionados.stream()
+                .map(s -> s.getPreco() != null ? s.getPreco() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        String descricaoServicos = servicosSelecionados.stream()
+                .map(ServicoModel::getNome)
+                .collect(Collectors.joining(" + "));
 
         LocalDateTime inicio = dto.dataHora();
         LocalDateTime fim = inicio.plusMinutes(duracaoMinutos);
@@ -167,14 +192,15 @@ public class AgendamentoService {
                 .cliente(cliente)
                 .barbeiro(barbeiro)
                 .servico(servicoPrincipal)
+                .servicos(servicosSelecionados)
                 .descricaoServicos(descricaoServicos)
                 .duracaoTotalMinutos(duracaoMinutos)
                 .dataHora(inicio)
                 .dataHoraFim(fim)
                 .preco(preco)
                 .status(StatusAgendamento.AGENDADO)
-                .nomeNaoUsuario(dto.nomeNaoUsuario())
-                .telefoneNaoUsuario(dto.telefoneNaoUsuario())
+                .nomeNaoUsuario(isGestor ? dto.nomeNaoUsuario() : null)
+                .telefoneNaoUsuario(isGestor ? dto.telefoneNaoUsuario() : null)
                 .build();
 
         AgendamentoModel salvo = agendamentoRepository.save(agendamento);
@@ -211,7 +237,7 @@ public class AgendamentoService {
         }
 
         LocalDateTime limiteCancelamento = agendamento.getDataHora().minusHours(1);
-        if (LocalDateTime.now().isAfter(limiteCancelamento)) {
+        if (LocalDateTime.now(dev.vitor.barbearia.ProjetoBarber.ProjetoBarberApplication.ZONE_BRASILIA).isAfter(limiteCancelamento)) {
             throw new BusinessRuleException("Agendamentos só podem ser cancelados com pelo menos 1 hora de antecedência.");
         }
 
@@ -335,7 +361,8 @@ public class AgendamentoService {
         if (agendamento.getStatus() != StatusAgendamento.AGENDADO) {
             throw new BusinessRuleException("Apenas agendamentos com status AGENDADO podem ser concluídos.");
         }
-        if (agendamento.getDataHora().isAfter(LocalDateTime.now())) {
+        LocalDateTime agoraBrasilia = LocalDateTime.now(dev.vitor.barbearia.ProjetoBarber.ProjetoBarberApplication.ZONE_BRASILIA);
+        if (agendamento.getDataHora().isAfter(agoraBrasilia)) {
             throw new BusinessRuleException("Não é possível concluir um atendimento que ainda não começou.");
         }
         if (historicoRepository.existsByAgendamentoId(agendamentoId)) {
@@ -373,7 +400,7 @@ public class AgendamentoService {
                 .clienteNome(cliente != null ? cliente.getNome() : agendamento.getNomeNaoUsuario())
                 .clienteNaoUsuario(cliente == null)
                 .dataHoraAtendimento(agendamento.getDataHora())
-                .dataHoraConclusao(LocalDateTime.now())
+                .dataHoraConclusao(agoraBrasilia)
                 .valorTabela(valorTabela)
                 .valorPago(valorPago)
                 .formaPagamento(dto.formaPagamento())
@@ -434,6 +461,7 @@ public class AgendamentoService {
 
         List<LocalTime> horariosLivres = new ArrayList<>();
         LocalTime slot = inicioExpediente;
+        LocalDateTime agoraBrasilia = LocalDateTime.now(dev.vitor.barbearia.ProjetoBarber.ProjetoBarberApplication.ZONE_BRASILIA);
 
         while (!slot.plusMinutes(duracaoMinutos).isAfter(fimExpediente)) {
             LocalTime slotFimTime = slot.plusMinutes(duracaoMinutos);
@@ -441,7 +469,7 @@ public class AgendamentoService {
             LocalDateTime slotFim = slotInicio.plusMinutes(duracaoMinutos);
 
             // Verifica se o slot é no passado caso a data seja hoje
-            boolean noPassado = slotInicio.isBefore(LocalDateTime.now());
+            boolean noPassado = slotInicio.isBefore(agoraBrasilia);
 
             // Verifica se o slot conflita com o intervalo de pausa/almoço do barbeiro
             boolean emHorarioDePausa = (inicioPausa != null && fimPausa != null)
