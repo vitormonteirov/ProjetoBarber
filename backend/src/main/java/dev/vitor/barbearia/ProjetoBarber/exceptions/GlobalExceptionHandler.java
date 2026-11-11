@@ -54,6 +54,19 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ProblemDetail handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
+        String msg = (ex.getMessage() != null && !ex.getMessage().equals("Access Denied"))
+                ? ex.getMessage()
+                : "Acesso negado: você não possui permissão para realizar esta operação.";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, msg);
+        problem.setTitle("Acesso Negado");
+        problem.setType(URI.create("https://barber.dev/errors/access-denied"));
+        problem.setProperty("timestamp", Instant.now());
+        problem.setProperty("message", msg);
+        return problem;
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGenericException(Exception ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(

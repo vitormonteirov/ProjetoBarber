@@ -145,8 +145,21 @@ public class AgendamentoService {
 
     @Transactional
     public AgendamentoModel cancelar(Long id) {
+        return cancelar(id, null, true);
+    }
+
+    @Transactional
+    public AgendamentoModel cancelar(Long id, String emailSolicitante, boolean isGestor) {
         AgendamentoModel agendamento = agendamentoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado com ID: " + id));
+
+        if (!isGestor) {
+            ClienteModel cliente = agendamento.getCliente();
+            if (cliente == null || cliente.getEmail() == null || !cliente.getEmail().equalsIgnoreCase(emailSolicitante)) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Acesso negado: você só pode cancelar os seus próprios agendamentos.");
+            }
+        }
 
         if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
             throw new BusinessRuleException("Este agendamento já se encontra cancelado.");

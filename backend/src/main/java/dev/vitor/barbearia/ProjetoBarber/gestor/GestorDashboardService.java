@@ -1,6 +1,5 @@
 package dev.vitor.barbearia.ProjetoBarber.gestor;
 
-import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoModel;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoRepository;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.FormaPagamento;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.StatusAgendamento;
@@ -42,13 +41,16 @@ public class GestorDashboardService {
         LocalDateTime de = inicio != null ? inicio : LocalDate.of(2000, 1, 1).atStartOfDay();
         LocalDateTime ate = fim != null ? fim : LocalDate.now().plusYears(10).atStartOfDay();
 
-        List<AgendamentoModel> agendamentos = (inicio != null && fim != null)
-                ? agendamentoRepository.findByDataHoraBetween(inicio, fim)
-                : agendamentoRepository.findAll();
-
-        long totalAgendamentos = agendamentos.size();
-        long cancelados = agendamentos.stream().filter(a -> a.getStatus() == StatusAgendamento.CANCELADO).count();
-        long pendentes = agendamentos.stream().filter(a -> a.getStatus() == StatusAgendamento.AGENDADO).count();
+        boolean temFiltroPeriodo = (inicio != null && fim != null);
+        long totalAgendamentos = temFiltroPeriodo
+                ? agendamentoRepository.countByDataHoraBetween(inicio, fim)
+                : agendamentoRepository.count();
+        long cancelados = temFiltroPeriodo
+                ? agendamentoRepository.countByDataHoraBetweenAndStatus(inicio, fim, StatusAgendamento.CANCELADO)
+                : agendamentoRepository.countByStatus(StatusAgendamento.CANCELADO);
+        long pendentes = temFiltroPeriodo
+                ? agendamentoRepository.countByDataHoraBetweenAndStatus(inicio, fim, StatusAgendamento.AGENDADO)
+                : agendamentoRepository.countByStatus(StatusAgendamento.AGENDADO);
 
         Map<Long, BarbeiroModel> barbeirosMap = barbeiroRepository.findAll().stream()
                 .collect(Collectors.toMap(BarbeiroModel::getId, Function.identity()));
@@ -107,10 +109,11 @@ public class GestorDashboardService {
     public RelatorioPeriodoDTO obterRelatorioPeriodo(LocalDate dataInicio, LocalDate dataFim) {
         IntervaloPeriodo intervalo = resolverIntervalo(dataInicio, dataFim);
 
-        List<AgendamentoModel> agendamentosNoPeriodo = agendamentoRepository.findByDataHoraBetween(
-                intervalo.inicio(), intervalo.fimExclusivo().minusNanos(1));
-        long pendentes = agendamentosNoPeriodo.stream().filter(a -> a.getStatus() == StatusAgendamento.AGENDADO).count();
-        long cancelados = agendamentosNoPeriodo.stream().filter(a -> a.getStatus() == StatusAgendamento.CANCELADO).count();
+        LocalDateTime fimInclusivo = intervalo.fimExclusivo().minusNanos(1);
+        long pendentes = agendamentoRepository.countByDataHoraBetweenAndStatus(
+                intervalo.inicio(), fimInclusivo, StatusAgendamento.AGENDADO);
+        long cancelados = agendamentoRepository.countByDataHoraBetweenAndStatus(
+                intervalo.inicio(), fimInclusivo, StatusAgendamento.CANCELADO);
 
         // 1. Por forma de pagamento
         List<CaixaPorFormaPagamentoDTO> porFormaPagamento = historicoRepository

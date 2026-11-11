@@ -49,6 +49,12 @@ public interface AgendamentoRepository extends JpaRepository<AgendamentoModel, L
 
     List<AgendamentoModel> findByDataHoraBetween(LocalDateTime inicio, LocalDateTime fim);
 
+    long countByDataHoraBetween(LocalDateTime inicio, LocalDateTime fim);
+
+    long countByDataHoraBetweenAndStatus(LocalDateTime inicio, LocalDateTime fim, StatusAgendamento status);
+
+    long countByStatus(StatusAgendamento status);
+
     List<AgendamentoModel> findByStatus(StatusAgendamento status);
 
     Page<AgendamentoModel> findByStatusOrderByDataHoraAsc(StatusAgendamento status, Pageable pageable);

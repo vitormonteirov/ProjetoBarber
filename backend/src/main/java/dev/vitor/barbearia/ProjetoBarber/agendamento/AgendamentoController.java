@@ -63,8 +63,13 @@ public class AgendamentoController {
 
     @PatchMapping("/{id}/cancelar")
     @PreAuthorize("hasAnyRole('CLIENTE', 'GESTOR')")
-    public ResponseEntity<AgendamentoResponseDTO> cancelar(@PathVariable Long id) {
-        AgendamentoModel model = agendamentoService.cancelar(id);
+    public ResponseEntity<AgendamentoResponseDTO> cancelar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isGestor = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_GESTOR".equals(a.getAuthority()));
+        String emailSolicitante = userDetails != null ? userDetails.getUsername() : null;
+        AgendamentoModel model = agendamentoService.cancelar(id, emailSolicitante, isGestor);
         return ResponseEntity.ok(agendamentoMapper.toResponseDTO(model));
     }
 }

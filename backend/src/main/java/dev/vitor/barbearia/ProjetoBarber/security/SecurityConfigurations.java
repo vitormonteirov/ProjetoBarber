@@ -2,6 +2,7 @@ package dev.vitor.barbearia.ProjetoBarber.security;
 
 import dev.vitor.barbearia.ProjetoBarber.usuario.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -29,8 +30,12 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfigurations {
 
+    private final RateLimitingFilter rateLimitingFilter;
     private final SecurityFilter securityFilter;
     private final UsuarioRepository usuarioRepository;
+
+    @Value("${spring.h2.console.enabled:false}")
+    private boolean h2ConsoleEnabled;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -39,17 +44,27 @@ public class SecurityConfigurations {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(req -> {
-                    // Console H2 e Swagger/Docs caso aplicável
-                    req.requestMatchers("/h2-console/**").permitAll();
+                    // Console H2: bloqueado por padrão; liberado apenas se explicitamente ativado no ambiente local
+                    if (h2ConsoleEnabled) {
+                        req.requestMatchers("/h2-console/**").permitAll();
+                    } else {
+                        req.requestMatchers("/h2-console/**").denyAll();
+                    }
+
                     req.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
 
                     // Autenticação e Registro
                     req.requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll();
 
-                    // Rotas Públicas para clientes consultarem catálogo antes de agendar
+                    // Rotas Públicas somente leitura (GET) para consulta de catálogo e disponibilidade
                     req.requestMatchers(HttpMethod.GET, "/api/servicos/**").permitAll();
                     req.requestMatchers(HttpMethod.GET, "/api/barbeiros/**").permitAll();
                     req.requestMatchers(HttpMethod.GET, "/api/agendamentos/disponibilidade").permitAll();
+
+                    // Mutação de catálogo de Serviços e Barbeiros exclusiva do Gestor
+                    req.requestMatchers(HttpMethod.POST, "/api/servicos/**", "/api/barbeiros/**").hasRole("GESTOR");
+                    req.requestMatchers(HttpMethod.PUT, "/api/servicos/**", "/api/barbeiros/**").hasRole("GESTOR");
+                    req.requestMatchers(HttpMethod.DELETE, "/api/servicos/**", "/api/barbeiros/**").hasRole("GESTOR");
 
                     // Rotas restritas para Gestor
                     req.requestMatchers("/api/gestor/**").hasRole("GESTOR");
@@ -60,13 +75,22 @@ public class SecurityConfigurations {
                     // Rotas restritas para Barbeiro
                     req.requestMatchers("/api/barbeiro/**").hasRole("BARBEIRO");
 
-                    // Rotas restritas para Cliente
+                    // Rotas de Clientes (detalhamento protegido adicionalmente via @PreAuthorize e checagem de titularidade)
+                    req.requestMatchers("/api/clientes/**").hasAnyRole("CLIENTE", "GESTOR");
                     req.requestMatchers("/api/cliente/**").hasRole("CLIENTE");
 
                     // Demais requisições autenticadas
                     req.anyRequest().authenticated();
                 })
-                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)) // Permite H2 Console
+                .headers(headers -> {
+                    if (h2ConsoleEnabled) {
+                        headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin);
+                    } else {
+                        headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::deny);
+                    }
+                    headers.contentTypeOptions(Customizer.withDefaults());
+                })
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
