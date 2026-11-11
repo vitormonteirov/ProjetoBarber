@@ -57,20 +57,20 @@ public interface AtendimentoHistoricoRepository extends JpaRepository<Atendiment
 
     /** [servicoId, servicoNome, quantidade, totalPago] */
     @Query("""
-            SELECT h.servicoId, MAX(h.servicoNome), COUNT(h), SUM(h.valorPago)
+            SELECT h.servicoId, h.servicoNome, COUNT(h), SUM(h.valorPago)
             FROM AtendimentoHistoricoModel h
             WHERE h.dataHoraAtendimento >= :inicio AND h.dataHoraAtendimento < :fim
-            GROUP BY h.servicoId
+            GROUP BY h.servicoId, h.servicoNome
             ORDER BY COUNT(h) DESC
             """)
     List<Object[]> totalizarPorServico(@Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
 
     /** [barbeiroId, servicoId, servicoNome, quantidade, totalPago, totalComissao] */
     @Query("""
-            SELECT h.barbeiroId, h.servicoId, MAX(h.servicoNome), COUNT(h), SUM(h.valorPago), SUM(h.valorComissao)
+            SELECT h.barbeiroId, h.servicoId, h.servicoNome, COUNT(h), SUM(h.valorPago), SUM(h.valorComissao)
             FROM AtendimentoHistoricoModel h
             WHERE h.dataHoraAtendimento >= :inicio AND h.dataHoraAtendimento < :fim
-            GROUP BY h.barbeiroId, h.servicoId
+            GROUP BY h.barbeiroId, h.servicoId, h.servicoNome
             """)
     List<Object[]> totalizarPorBarbeiroEServico(@Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim);
 
