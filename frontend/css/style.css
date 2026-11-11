@@ -1703,3 +1703,121 @@ body {
     letter-spacing: 0.04em;
 }
 
+/* ==========================================================================
+   ABAS OPERACIONAIS DO GESTOR & FORMULÁRIOS CRUD
+   ========================================================================== */
+.gestor-tabs-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+}
+
+.gestor-tab-btn {
+    flex: 1 1 auto;
+    padding: 0.75rem 1.1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.gestor-tab-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.gestor-tab-btn.active {
+    background: linear-gradient(135deg, var(--blue-primary), var(--blue-accent));
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+}
+
+.gestor-tab-pane {
+    display: none;
+    animation: fadeInStep 0.25s ease forwards;
+}
+
+.gestor-tab-pane.active {
+    display: block;
+}
+
+.operational-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.balcao-tipo-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.radio-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.65rem 1.1rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-main);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.radio-pill:hover {
+    border-color: var(--blue-accent);
+}
+
+.radio-pill input[type="radio"] {
+    accent-color: var(--blue-accent);
+}
+
+.crud-item-card {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.95rem 1.15rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+}
+
+.crud-item-card.inativo {
+    opacity: 0.62;
+}
+
+.crud-item-info h4 {
+    font-size: 0.98rem;
+    margin-bottom: 0.2rem;
+}
+
+.crud-item-info p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.crud-item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+

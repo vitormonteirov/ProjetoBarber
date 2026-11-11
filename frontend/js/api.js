@@ -203,9 +203,87 @@ const api = {
     },
 
     async atualizarPercentualComissaoBarbeiro(barbeiroId, percentualComissao) {
-        return await this.request(`/gestor/barbeiros/${barbeiroId}/comissao`, {
+        return await this.request(`/gestor/barbeiros/${encodeURIComponent(barbeiroId)}/comissao`, {
             method: 'PATCH',
             body: JSON.stringify({ percentualComissao: Number(percentualComissao) })
+        });
+    },
+
+    // --- GESTÃO OPERACIONAL: BARBEIROS, SERVIÇOS, CLIENTES E REAGENDAMENTO ---
+    async cadastrarBarbeiroComAcesso({ nome, email, senha, telefone, percentualComissao }) {
+        const payload = { nome, email, senha, telefone };
+        if (percentualComissao !== null && percentualComissao !== undefined && percentualComissao !== '') {
+            payload.percentualComissao = Number(percentualComissao);
+        }
+        return await this.request('/gestor/barbeiros', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async atualizarBarbeiro(id, { nome, email, telefone }) {
+        return await this.request(`/barbeiros/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            body: JSON.stringify({ nome, email, telefone })
+        });
+    },
+
+    async desativarBarbeiro(id) {
+        return await this.request(`/barbeiros/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+    },
+
+    async criarServico({ nome, descricao, preco, duracaoMinutos }) {
+        return await this.request('/servicos', {
+            method: 'POST',
+            body: JSON.stringify({
+                nome,
+                descricao: descricao || '',
+                preco: Number(preco),
+                duracaoMinutos: Number(duracaoMinutos)
+            })
+        });
+    },
+
+    async atualizarServico(id, { nome, descricao, preco, duracaoMinutos }) {
+        return await this.request(`/servicos/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                nome,
+                descricao: descricao || '',
+                preco: Number(preco),
+                duracaoMinutos: Number(duracaoMinutos)
+            })
+        });
+    },
+
+    async desativarServico(id) {
+        return await this.request(`/servicos/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+    },
+
+    async listarClientesGestor(apenasAtivos = true, size = 100) {
+        const params = new URLSearchParams({
+            apenasAtivos: String(Boolean(apenasAtivos)),
+            size: String(Math.min(100, Number(size) || 100))
+        });
+        const data = await this.request(`/clientes?${params.toString()}`);
+        return data?.content || [];
+    },
+
+    async alterarHorarioAgendamento(agendamentoId, novaDataHora, notaAlteracao) {
+        return await this.request(`/barbeiro/agendamentos/${encodeURIComponent(agendamentoId)}/alterar-horario`, {
+            method: 'PATCH',
+            body: JSON.stringify({ novaDataHora, notaAlteracao })
+        });
+    },
+
+    async cancelarAgendamentoOperacional(agendamentoId, motivo) {
+        return await this.request(`/barbeiro/agendamentos/${encodeURIComponent(agendamentoId)}/cancelar`, {
+            method: 'PATCH',
+            body: JSON.stringify({ motivo })
         });
     },
 

@@ -387,19 +387,40 @@
         </div>
     </section>
 
-    <!-- PAINEL DINÂMICO DO GESTOR & AGENDA DE CONCLUSÃO -->
+    <!-- PAINEL DINÂMICO DO GESTOR & GESTÃO OPERACIONAL -->
     <section id="gestor-dashboard" class="section section-darker" style="display: none;">
         <div class="container">
             <div class="section-header">
                 <span class="section-kicker" id="painel-kicker">Gestão Financeira & Operacional</span>
-                <h2 class="section-title" id="painel-titulo">Painel Dinâmico do <span>Gestor</span></h2>
+                <h2 class="section-title" id="painel-titulo">Central Operacional do <span>Gestor</span></h2>
                 <p class="section-subtitle" id="painel-subtitulo">
-                    Caixa do período, histórico imutável de atendimentos e cálculo/simulação de comissões por barbeiro.
+                    Caixa do período, histórico permanente, comissões, gestão de barbeiros, serviços e reservas de balcão.
                 </p>
             </div>
 
-            <!-- BLOCO EXCLUSIVO DO GESTOR: FILTRO DE PERÍODO + MÉTRICAS + COMISSÃO + HISTÓRICO -->
-            <div id="gestor-only-container">
+            <!-- BARRA DE ABAS OPERACIONAIS -->
+            <div class="gestor-tabs-nav" id="gestor-tabs-nav">
+                <button type="button" class="gestor-tab-btn active" data-tab="financeiro" id="tab-btn-financeiro">
+                    📊 Caixa, Comissões & Histórico
+                </button>
+                <button type="button" class="gestor-tab-btn" data-tab="agenda" id="tab-btn-agenda">
+                    📅 Agenda, Baixa & Reagendamento
+                </button>
+                <button type="button" class="gestor-tab-btn" data-tab="balcao" id="tab-btn-balcao">
+                    ⚡ Reserva Rápida (Cliente / Não-Usuário)
+                </button>
+                <button type="button" class="gestor-tab-btn" data-tab="barbeiros" id="tab-btn-barbeiros">
+                    💈 Equipe de Barbeiros
+                </button>
+                <button type="button" class="gestor-tab-btn" data-tab="servicos" id="tab-btn-servicos">
+                    ✂️ Catálogo de Serviços
+                </button>
+            </div>
+
+            <!-- =========================================================
+                 ABA 1: CAIXA, COMISSÕES & HISTÓRICO IMUTÁVEL (EXCLUSIVO GESTOR)
+                 ========================================================= -->
+            <div id="gestor-only-container" class="gestor-tab-pane active" data-pane="financeiro">
                 <!-- Barra de Período -->
                 <div class="gestor-period-bar">
                     <div class="period-inputs">
@@ -413,6 +434,9 @@
                         </div>
                         <button type="button" class="btn btn-primary" id="btn-aplicar-periodo">
                             Atualizar Período
+                        </button>
+                        <button type="button" class="btn btn-outline-sm" id="btn-exportar-csv" title="Exportar histórico do período em formato CSV compatível com Excel">
+                            ⬇ Exportar CSV
                         </button>
                     </div>
                     <div class="period-Quick-presets">
@@ -528,17 +552,216 @@
                 </div>
             </div>
 
-            <!-- FILA DE AGENDAMENTOS PARA CONCLUIR (BARBEIRO E GESTOR) -->
-            <div class="gestor-panel-card" style="margin-top: 1.5rem;">
-                <div class="panel-card-header panel-header-flex">
-                    <div>
-                        <h3>Atendimentos Agendados — Dar Baixa / Concluir</h3>
-                        <p>Ao concluir um atendimento, informe o valor pago e a forma de pagamento para lançá-lo no caixa e no histórico.</p>
+            <!-- =========================================================
+                 ABA 2: AGENDA OPERACIONAL — DAR BAIXA, REAGENDAR OU CANCELAR (BARBEIRO & GESTOR)
+                 ========================================================= -->
+            <div class="gestor-tab-pane" data-pane="agenda" id="pane-operacional-agenda">
+                <div class="gestor-panel-card">
+                    <div class="panel-card-header panel-header-flex">
+                        <div>
+                            <h3>Controle de Agenda — Concluir, Alterar Horário ou Cancelar</h3>
+                            <p>Gerencie os compromissos ativos: dê baixa informando pagamento, altere horários com justificativa ou cancele.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline-sm" id="btn-recarregar-fila">↻ Atualizar Agenda</button>
                     </div>
-                    <button type="button" class="btn btn-outline-sm" id="btn-recarregar-fila">Atualizar Lista</button>
+                    <div id="lista-fila-conclusao" class="my-appointments-list">
+                        <p class="slots-empty-state">Nenhum agendamento pendente encontrado.</p>
+                    </div>
                 </div>
-                <div id="lista-fila-conclusao" class="my-appointments-list">
-                    <p class="slots-empty-state">Nenhum agendamento pendente encontrado.</p>
+            </div>
+
+            <!-- =========================================================
+                 ABA 3: RESERVA RÁPIDA DE BALCÃO / WHATSAPP (CLIENTE CADASTRADO OU NÃO-USUÁRIO)
+                 ========================================================= -->
+            <div class="gestor-tab-pane" data-pane="balcao" id="pane-operacional-balcao">
+                <div class="gestor-panel-card">
+                    <div class="panel-card-header">
+                        <h3>Reserva Rápida pelo Gestor (Cliente Cadastrado ou Não-Usuário)</h3>
+                        <p>Reserve horários para qualquer cliente cadastrado ou registre um atendimento avulso para quem não possui conta no sistema.</p>
+                    </div>
+
+                    <form id="form-gestor-agendamento-balcao" class="operational-form">
+                        <div class="balcao-tipo-toggle">
+                            <label class="radio-pill">
+                                <input type="radio" name="balcao-tipo-cliente" value="nao-usuario" checked>
+                                <span>👤 Não-Usuário (Avulso / Balcão / WhatsApp)</span>
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="balcao-tipo-cliente" value="cadastrado">
+                                <span>🪪 Cliente já Cadastrado</span>
+                            </label>
+                        </div>
+
+                        <!-- Campos para Não-Usuário -->
+                        <div id="box-balcao-nao-usuario" class="form-row">
+                            <div class="form-group">
+                                <label for="balcao-nome-avulso">Nome do Cliente (Não-Usuário) *</label>
+                                <input type="text" id="balcao-nome-avulso" placeholder="Ex: Roberto Almeida (WhatsApp)">
+                            </div>
+                            <div class="form-group">
+                                <label for="balcao-telefone-avulso">Telefone / WhatsApp</label>
+                                <input type="tel" id="balcao-telefone-avulso" placeholder="(11) 98888-7777">
+                            </div>
+                        </div>
+
+                        <!-- Campo para Cliente Cadastrado -->
+                        <div id="box-balcao-cadastrado" class="form-row" style="display: none;">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="balcao-select-cliente">Selecionar Cliente Cadastrado *</label>
+                                <select id="balcao-select-cliente" class="custom-date-input w-full">
+                                    <option value="">Selecione um cliente...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="balcao-select-barbeiro">Barbeiro *</label>
+                                <select id="balcao-select-barbeiro" class="custom-date-input w-full" required>
+                                    <option value="">Selecione o barbeiro...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="balcao-select-servico">Serviço *</label>
+                                <select id="balcao-select-servico" class="custom-date-input w-full" required>
+                                    <option value="">Selecione o serviço...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="balcao-data">Data do Atendimento *</label>
+                                <input type="date" id="balcao-data" class="custom-date-input w-full" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="balcao-hora">Horário Livre *</label>
+                                <select id="balcao-hora" class="custom-date-input w-full" required>
+                                    <option value="">Escolha barbeiro e data primeiro...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="calc-actions">
+                            <button type="submit" class="btn btn-primary">
+                                ✓ Confirmar Reserva no Sistema
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 ABA 4: GESTÃO DE BARBEIROS (EXCLUSIVO GESTOR)
+                 ========================================================= -->
+            <div class="gestor-tab-pane" data-pane="barbeiros" id="pane-operacional-barbeiros">
+                <div class="gestor-two-col">
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3 id="titulo-form-barbeiro">Cadastrar Novo Barbeiro</h3>
+                            <p id="subtitulo-form-barbeiro">A role BARBEIRO é atribuída única e exclusivamente pelo Gestor.</p>
+                        </div>
+                        <form id="form-gestor-barbeiro" class="operational-form">
+                            <input type="hidden" id="gestor-barbeiro-id">
+                            <div class="form-group">
+                                <label for="gestor-barbeiro-nome">Nome Completo *</label>
+                                <input type="text" id="gestor-barbeiro-nome" placeholder="Ex: Rafael Navalha" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-email">E-mail de Acesso *</label>
+                                    <input type="email" id="gestor-barbeiro-email" placeholder="barbeiro@tenoriosbarber.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-telefone">Telefone (10 a 15 dígitos) *</label>
+                                    <input type="tel" id="gestor-barbeiro-telefone" placeholder="11988887777" required>
+                                </div>
+                            </div>
+                            <div class="form-row" id="row-barbeiro-credenciais">
+                                <div class="form-group" id="group-barbeiro-senha">
+                                    <label for="gestor-barbeiro-senha">Senha Inicial (mín. 6 caracteres) *</label>
+                                    <input type="password" id="gestor-barbeiro-senha" placeholder="••••••••" minlength="6">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-comissao">Comissão Padrão (%)</label>
+                                    <input type="number" id="gestor-barbeiro-comissao" min="0" max="100" step="0.5" value="50">
+                                </div>
+                            </div>
+                            <div class="calc-actions">
+                                <button type="submit" class="btn btn-primary" id="btn-salvar-barbeiro">
+                                    Salvar Barbeiro
+                                </button>
+                                <button type="button" class="btn btn-ghost" id="btn-cancelar-edicao-barbeiro" style="display: none;">
+                                    Cancelar Edição
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header panel-header-flex">
+                            <div>
+                                <h3>Profissionais Cadastrados</h3>
+                                <p>Edite dados cadastrais, ajuste a comissão ou desative profissionais.</p>
+                            </div>
+                        </div>
+                        <div id="lista-gestor-barbeiros-crud" class="gestor-list-stack">
+                            <p class="slots-empty-state">Carregando barbeiros...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 ABA 5: CATÁLOGO DE SERVIÇOS (EXCLUSIVO GESTOR)
+                 ========================================================= -->
+            <div class="gestor-tab-pane" data-pane="servicos" id="pane-operacional-servicos">
+                <div class="gestor-two-col">
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3 id="titulo-form-servico">Incluir Novo Serviço</h3>
+                            <p>Adicione ou edite serviços, preços e durações oferecidos na barbearia.</p>
+                        </div>
+                        <form id="form-gestor-servico" class="operational-form">
+                            <input type="hidden" id="gestor-servico-id">
+                            <div class="form-group">
+                                <label for="gestor-servico-nome">Nome do Serviço *</label>
+                                <input type="text" id="gestor-servico-nome" placeholder="Ex: Corte Degradê & Sobrancelha" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gestor-servico-preco">Preço (R$) *</label>
+                                    <input type="number" id="gestor-servico-preco" min="1" step="0.50" placeholder="55.00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-servico-duracao">Duração (minutos) *</label>
+                                    <input type="number" id="gestor-servico-duracao" min="5" step="5" value="30" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="gestor-servico-descricao">Descrição para a Vitrine</label>
+                                <input type="text" id="gestor-servico-descricao" placeholder="Acabamento na navalha, lavagem e finalização...">
+                            </div>
+                            <div class="calc-actions">
+                                <button type="submit" class="btn btn-primary" id="btn-salvar-servico">
+                                    Salvar Serviço
+                                </button>
+                                <button type="button" class="btn btn-ghost" id="btn-cancelar-edicao-servico" style="display: none;">
+                                    Cancelar Edição
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3>Serviços do Catálogo</h3>
+                            <p>Serviços desativados saem da vitrine pública, mas permanecem preservados no histórico financeiro.</p>
+                        </div>
+                        <div id="lista-gestor-servicos-crud" class="gestor-list-stack">
+                            <p class="slots-empty-state">Carregando serviços...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -569,6 +792,37 @@
                 </div>
                 <button type="submit" class="btn btn-primary w-full">
                     Confirmar Recebimento & Concluir
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL REAGENDAR / ALTERAR HORÁRIO DO AGENDAMENTO (BARBEIRO OU GESTOR) -->
+    <div id="modal-reagendar-atendimento" class="modal-backdrop" style="display: none;">
+        <div class="modal-card auth-modal-card">
+            <button type="button" class="btn-close-modal" id="btn-fechar-modal-reagendar" aria-label="Fechar">✕</button>
+            <div class="modal-header-simple">
+                <h3>Alterar Horário do Agendamento</h3>
+                <p id="modal-reagendar-resumo">Defina a nova data/hora e registre o motivo da alteração.</p>
+            </div>
+            <form id="form-reagendar-atendimento" class="form-vertical">
+                <input type="hidden" id="reagendar-agendamento-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reagendar-nova-data">Nova Data *</label>
+                        <input type="date" id="reagendar-nova-data" class="custom-date-input w-full" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reagendar-nova-hora">Novo Horário *</label>
+                        <input type="time" id="reagendar-nova-hora" class="custom-date-input w-full" step="1800" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reagendar-nota">Justificativa / Nota de Alteração *</label>
+                    <input type="text" id="reagendar-nota" placeholder="Ex: Solicitação do cliente via WhatsApp" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-full">
+                    Confirmar Novo Horário
                 </button>
             </form>
         </div>

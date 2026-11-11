@@ -182,7 +182,7 @@ function atualizarEstadoAuth() {
         if (secGestor) {
             if (isGestor || isBarbeiro) {
                 secGestor.style.display = 'block';
-                if (gestorOnlyBox) gestorOnlyBox.style.display = isGestor ? 'block' : 'none';
+                configurarVisibilidadeAbasPorRole(isGestor);
                 carregarPainelGestorOuBarbeiro();
             } else {
                 secGestor.style.display = 'none';
@@ -867,10 +867,46 @@ window.cancelarAgendamentoModal = async function(id) {
 };
 
 // =========================================================================
-// PAINEL DINÂMICO DO GESTOR: RELATÓRIO DE PERÍODO, CAIXA, HISTÓRICO E COMISSÃO
+// PAINEL DINÂMICO DO GESTOR & ABAS DE GESTÃO OPERACIONAL
 // =========================================================================
 let gestorEventosConfigurados = false;
 let filaConclusaoCache = [];
+let historicoItensCache = [];
+let barbeirosCrudCache = [];
+let servicosCrudCache = [];
+let clientesCrudCache = [];
+
+function configurarVisibilidadeAbasPorRole(isGestor) {
+    const abasExclusivasGestor = ['financeiro', 'balcao', 'barbeiros', 'servicos'];
+    abasExclusivasGestor.forEach(tab => {
+        const btn = document.querySelector(`.gestor-tab-btn[data-tab="${tab}"]`);
+        if (btn) btn.style.display = isGestor ? 'inline-block' : 'none';
+    });
+
+    const titulo = document.getElementById('painel-titulo');
+    const subtitulo = document.getElementById('painel-subtitulo');
+    if (isGestor) {
+        if (titulo) titulo.innerHTML = 'Central Operacional do <span>Gestor</span>';
+        if (subtitulo) subtitulo.textContent = 'Caixa do período, histórico permanente, comissões, gestão de barbeiros, serviços e reservas de balcão.';
+        const algumaAtiva = document.querySelector('.gestor-tab-btn.active');
+        if (!algumaAtiva || algumaAtiva.style.display === 'none') {
+            selecionarAbaOperacional('financeiro');
+        }
+    } else {
+        if (titulo) titulo.innerHTML = 'Minha Agenda do <span>Barbeiro</span>';
+        if (subtitulo) subtitulo.textContent = 'Gerencie seus atendimentos agendados: conclua informando o pagamento, reagende horários ou cancele.';
+        selecionarAbaOperacional('agenda');
+    }
+}
+
+function selecionarAbaOperacional(tabName) {
+    document.querySelectorAll('.gestor-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    document.querySelectorAll('.gestor-tab-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.dataset.pane === tabName);
+    });
+}
 
 function formatarIsoLocal(dateObj) {
     const y = dateObj.getFullYear();
@@ -910,15 +946,21 @@ async function carregarPainelGestorOuBarbeiro() {
     if (!user || !appState.backendOnline) return;
 
     const inputIni = document.getElementById('gestor-data-inicio');
-    const inputFim = document.getElementById('gestor-data-fim');
     if (inputIni && !inputIni.value) {
         aplicarPresetPeriodo('mes');
+    }
+
+    const balcaoData = document.getElementById('balcao-data');
+    if (balcaoData && !balcaoData.value) {
+        balcaoData.min = getHojeIso();
+        balcaoData.value = getHojeIso();
     }
 
     if (user.role === 'ROLE_GESTOR') {
         await Promise.all([
             atualizarRelatorioEHistoricoGestor(),
-            carregarFilaConclusao()
+            carregarFilaConclusao(),
+            carregarDadosOperacionaisGestor()
         ]);
     } else if (user.role === 'ROLE_BARBEIRO') {
         await carregarFilaConclusao();
@@ -1055,8 +1097,9 @@ async function carregarTabelaHistorico() {
     const servicoId = document.getElementById('filtro-historico-servico')?.value || null;
 
     try {
-        const page = await api.listarHistoricoAtendimentos({ dataInicio, dataFim, barbeiroId, servicoId, size: 50 });
+        const page = await api.listarHistoricoAtendimentos({ dataInicio, dataFim, barbeiroId, servicoId, size: 100 });
         const itens = page?.content || [];
+        historicoItensCache = itens;
 
         if (!itens.length) {
             tbody.innerHTML = '<tr><td colspan="8" class="slots-empty-state">Nenhum atendimento registrado neste filtro.</td></tr>';
@@ -1088,6 +1131,55 @@ async function carregarTabelaHistorico() {
     }
 }
 
+function exportarHistoricoCsv() {
+    if (!historicoItensCache || !historicoItensCache.length) {
+        showToast('Não há registros no histórico atual para exportar.', 'info');
+        return;
+    }
+
+    const cabecalho = [
+        'ID',
+        'Data/Hora Atendimento',
+        'Cliente',
+        'Tipo Cliente',
+        'Barbeiro',
+        'Servico',
+        'Forma Pagamento',
+        'Valor Pago (R$)',
+        'Percentual Comissao (%)',
+        'Valor Comissao (R$)'
+    ];
+
+    const escaparCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+    const linhas = historicoItensCache.map(h => [
+        h.id,
+        h.dataHoraAtendimento,
+        h.clienteNome || 'Cliente Avulso',
+        h.clienteNaoUsuario ? 'Nao-Usuario' : 'Cadastrado',
+        h.barbeiroNome,
+        h.servicoNome,
+        h.formaPagamento,
+        Number(h.valorPago || 0).toFixed(2),
+        Number(h.percentualComissao || 0).toFixed(2),
+        Number(h.valorComissao || 0).toFixed(2)
+    ].map(escaparCsv).join(';'));
+
+    const conteudoCsv = '\uFEFF' + [cabecalho.map(escaparCsv).join(';'), ...linhas].join('\r\n');
+    const blob = new Blob([conteudoCsv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const ini = document.getElementById('gestor-data-inicio')?.value || 'inicio';
+    const fim = document.getElementById('gestor-data-fim')?.value || 'fim';
+    link.href = url;
+    link.download = `relatorio-atendimentos-${ini}-a-${fim}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast('Relatório CSV exportado com sucesso!');
+}
+
 async function carregarFilaConclusao() {
     const container = document.getElementById('lista-fila-conclusao');
     const user = api.getUsuarioLogado();
@@ -1095,8 +1187,8 @@ async function carregarFilaConclusao() {
 
     try {
         const lista = user.role === 'ROLE_GESTOR'
-            ? await api.listarAgendamentosGestor('AGENDADO', 0, 30)
-            : await api.minhaAgendaBarbeiro(0, 30);
+            ? await api.listarAgendamentosGestor('AGENDADO', 0, 50)
+            : await api.minhaAgendaBarbeiro(0, 50);
 
         const pendentes = (lista || []).filter(a => a.status === 'AGENDADO');
         filaConclusaoCache = pendentes;
@@ -1111,16 +1203,25 @@ async function carregarFilaConclusao() {
             const dataStr = dt.toLocaleDateString('pt-BR');
             const horaStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             const precoSugerido = a.preco ?? 0;
+            const badgeAvulso = (!a.clienteId && a.nomeNaoUsuario)
+                ? '<span class="servico-pill" style="margin-left: 0.4rem;">Não-Usuário</span>'
+                : '';
 
             return `
                 <div class="appointment-item-card">
                     <div class="app-item-info">
-                        <h4>#${Number(a.id)} • ${escapeHtml(a.servicoNome || 'Atendimento')} — ${escapeHtml(a.clienteNome || a.nomeNaoUsuario || 'Cliente')}</h4>
+                        <h4>#${Number(a.id)} • ${escapeHtml(a.servicoNome || 'Atendimento')} — ${escapeHtml(a.clienteNome || a.nomeNaoUsuario || 'Cliente')} ${badgeAvulso}</h4>
                         <p>Barbeiro: <strong>${escapeHtml(a.barbeiroNome)}</strong> • 📅 ${escapeHtml(dataStr)} às ${escapeHtml(horaStr)}h • Valor ref.: ${formatadorMoeda.format(precoSugerido)}</p>
                     </div>
-                    <div>
+                    <div class="crud-item-actions">
                         <button type="button" class="btn btn-primary" onclick="abrirModalConcluirPorId(${Number(a.id)})">
-                            ✓ Concluir Atendimento
+                            ✓ Concluir
+                        </button>
+                        <button type="button" class="btn btn-outline-sm" onclick="abrirModalReagendarPorId(${Number(a.id)})">
+                            🕒 Alterar Horário
+                        </button>
+                        <button type="button" class="btn btn-outline-sm" style="border-color: var(--danger); color: var(--danger);" onclick="cancelarAgendamentoOperacionalPorId(${Number(a.id)})">
+                            ✕ Cancelar
                         </button>
                     </div>
                 </div>
@@ -1141,14 +1242,252 @@ window.abrirModalConcluirPorId = function(id) {
     document.getElementById('modal-concluir-atendimento').style.display = 'flex';
 };
 
+window.abrirModalReagendarPorId = function(id) {
+    const item = filaConclusaoCache.find(a => Number(a.id) === Number(id));
+    if (!item) return;
+    document.getElementById('reagendar-agendamento-id').value = item.id;
+    const dt = new Date(item.dataHora);
+    document.getElementById('reagendar-nova-data').value = formatarIsoLocal(dt);
+    document.getElementById('reagendar-nova-hora').value = dt.toTimeString().substring(0, 5);
+    document.getElementById('reagendar-nota').value = '';
+    document.getElementById('modal-reagendar-resumo').textContent =
+        `Agendamento #${item.id} • ${item.clienteNome || item.nomeNaoUsuario || 'Cliente'} com ${item.barbeiroNome}`;
+    document.getElementById('modal-reagendar-atendimento').style.display = 'flex';
+};
+
+window.cancelarAgendamentoOperacionalPorId = async function(id) {
+    const motivo = prompt('Informe o motivo do cancelamento (para registro de auditoria):', 'Solicitado pelo cliente / imprevisto na agenda');
+    if (!motivo || !motivo.trim()) return;
+    try {
+        await api.cancelarAgendamentoOperacional(id, motivo.trim());
+        showToast('Agendamento cancelado com sucesso!');
+        await carregarPainelGestorOuBarbeiro();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+};
+
+// =========================================================================
+// DADOS E CRUD DAS ABAS OPERACIONAIS DO GESTOR (BARBEIROS, SERVIÇOS E BALCÃO)
+// =========================================================================
+async function carregarDadosOperacionaisGestor() {
+    try {
+        const [barbeiros, servicos, clientes] = await Promise.all([
+            api.listarBarbeiros(false, 100).catch(() => []),
+            api.listarServicos(false, 100).catch(() => []),
+            api.listarClientesGestor(true, 100).catch(() => [])
+        ]);
+
+        barbeirosCrudCache = barbeiros || [];
+        servicosCrudCache = servicos || [];
+        clientesCrudCache = clientes || [];
+
+        renderizarListaBarbeirosCrud();
+        renderizarListaServicosCrud();
+        popularSelectsReservaBalcao();
+        await carregarHorariosLivresBalcao();
+    } catch (err) {
+        console.warn('Falha ao carregar dados operacionais do gestor:', err);
+    }
+}
+
+function renderizarListaBarbeirosCrud() {
+    const container = document.getElementById('lista-gestor-barbeiros-crud');
+    if (!container) return;
+
+    if (!barbeirosCrudCache.length) {
+        container.innerHTML = '<p class="slots-empty-state">Nenhum barbeiro cadastrado.</p>';
+        return;
+    }
+
+    container.innerHTML = barbeirosCrudCache.map(b => {
+        const ativo = b.ativo !== false;
+        const pct = b.percentualComissao ?? 50;
+        return `
+            <div class="crud-item-card ${ativo ? '' : 'inativo'}">
+                <div class="crud-item-info">
+                    <h4>${escapeHtml(b.nome)} ${ativo ? '<span class="barber-status-badge">Ativo</span>' : '<span class="barber-status-badge" style="color: var(--warning);">Inativo</span>'}</h4>
+                    <p>📧 ${escapeHtml(b.email)} • 📱 ${escapeHtml(b.telefone)} • Comissão: <strong>${escapeHtml(pct)}%</strong></p>
+                </div>
+                <div class="crud-item-actions">
+                    <button type="button" class="btn btn-outline-sm" onclick="prepararEdicaoBarbeiro(${Number(b.id)})">Editar</button>
+                    ${ativo
+                        ? `<button type="button" class="btn btn-outline-sm" style="border-color: var(--danger); color: var(--danger);" onclick="desativarBarbeiroCrud(${Number(b.id)})">Desativar</button>`
+                        : ''
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.prepararEdicaoBarbeiro = function(id) {
+    const b = barbeirosCrudCache.find(item => Number(item.id) === Number(id));
+    if (!b) return;
+    document.getElementById('gestor-barbeiro-id').value = b.id;
+    document.getElementById('gestor-barbeiro-nome').value = b.nome || '';
+    document.getElementById('gestor-barbeiro-email').value = b.email || '';
+    document.getElementById('gestor-barbeiro-telefone').value = b.telefone || '';
+    document.getElementById('gestor-barbeiro-comissao').value = b.percentualComissao ?? 50;
+    document.getElementById('gestor-barbeiro-senha').value = '';
+    document.getElementById('group-barbeiro-senha').style.display = 'none';
+    document.getElementById('titulo-form-barbeiro').textContent = `Editar Barbeiro #${b.id}`;
+    document.getElementById('btn-cancelar-edicao-barbeiro').style.display = 'inline-flex';
+};
+
+function resetarFormBarbeiro() {
+    document.getElementById('form-gestor-barbeiro')?.reset();
+    document.getElementById('gestor-barbeiro-id').value = '';
+    document.getElementById('gestor-barbeiro-comissao').value = '50';
+    document.getElementById('group-barbeiro-senha').style.display = 'block';
+    document.getElementById('titulo-form-barbeiro').textContent = 'Cadastrar Novo Barbeiro';
+    document.getElementById('btn-cancelar-edicao-barbeiro').style.display = 'none';
+}
+
+window.desativarBarbeiroCrud = async function(id) {
+    if (!confirm('Deseja desativar este barbeiro? O histórico de atendimentos dele permanecerá intacto.')) return;
+    try {
+        await api.desativarBarbeiro(id);
+        showToast('Barbeiro desativado com sucesso.');
+        await carregarCatalogo();
+        await carregarPainelGestorOuBarbeiro();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+};
+
+function renderizarListaServicosCrud() {
+    const container = document.getElementById('lista-gestor-servicos-crud');
+    if (!container) return;
+
+    if (!servicosCrudCache.length) {
+        container.innerHTML = '<p class="slots-empty-state">Nenhum serviço cadastrado.</p>';
+        return;
+    }
+
+    container.innerHTML = servicosCrudCache.map(s => {
+        const ativo = s.ativo !== false;
+        return `
+            <div class="crud-item-card ${ativo ? '' : 'inativo'}">
+                <div class="crud-item-info">
+                    <h4>${escapeHtml(s.nome)} — <strong>${formatadorMoeda.format(s.preco || 0)}</strong> (${Number(s.duracaoMinutos) || 30} min)</h4>
+                    <p>${escapeHtml(s.descricao || 'Sem descrição detalhada')}</p>
+                </div>
+                <div class="crud-item-actions">
+                    <button type="button" class="btn btn-outline-sm" onclick="prepararEdicaoServico(${Number(s.id)})">Editar</button>
+                    ${ativo
+                        ? `<button type="button" class="btn btn-outline-sm" style="border-color: var(--danger); color: var(--danger);" onclick="desativarServicoCrud(${Number(s.id)})">Desativar</button>`
+                        : ''
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.prepararEdicaoServico = function(id) {
+    const s = servicosCrudCache.find(item => Number(item.id) === Number(id));
+    if (!s) return;
+    document.getElementById('gestor-servico-id').value = s.id;
+    document.getElementById('gestor-servico-nome').value = s.nome || '';
+    document.getElementById('gestor-servico-preco').value = s.preco ?? '';
+    document.getElementById('gestor-servico-duracao').value = s.duracaoMinutos ?? 30;
+    document.getElementById('gestor-servico-descricao').value = s.descricao || '';
+    document.getElementById('titulo-form-servico').textContent = `Editar Serviço #${s.id}`;
+    document.getElementById('btn-cancelar-edicao-servico').style.display = 'inline-flex';
+};
+
+function resetarFormServico() {
+    document.getElementById('form-gestor-servico')?.reset();
+    document.getElementById('gestor-servico-id').value = '';
+    document.getElementById('gestor-servico-duracao').value = '30';
+    document.getElementById('titulo-form-servico').textContent = 'Incluir Novo Serviço';
+    document.getElementById('btn-cancelar-edicao-servico').style.display = 'none';
+}
+
+window.desativarServicoCrud = async function(id) {
+    if (!confirm('Deseja desativar este serviço? O histórico financeiro permanecerá intacto.')) return;
+    try {
+        await api.desativarServico(id);
+        showToast('Serviço desativado com sucesso.');
+        await carregarCatalogo();
+        await carregarPainelGestorOuBarbeiro();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+};
+
+function popularSelectsReservaBalcao() {
+    const selCliente = document.getElementById('balcao-select-cliente');
+    const selBarbeiro = document.getElementById('balcao-select-barbeiro');
+    const selServico = document.getElementById('balcao-select-servico');
+
+    if (selCliente) {
+        const val = selCliente.value;
+        selCliente.innerHTML = '<option value="">Selecione um cliente cadastrado...</option>' +
+            clientesCrudCache.map(c => `<option value="${Number(c.id)}">${escapeHtml(c.nome)} (${escapeHtml(c.email)})</option>`).join('');
+        if (val) selCliente.value = val;
+    }
+
+    if (selBarbeiro) {
+        const val = selBarbeiro.value;
+        const ativos = barbeirosCrudCache.filter(b => b.ativo !== false);
+        selBarbeiro.innerHTML = '<option value="">Selecione o barbeiro...</option>' +
+            ativos.map(b => `<option value="${Number(b.id)}">${escapeHtml(b.nome)}</option>`).join('');
+        if (val) selBarbeiro.value = val;
+    }
+
+    if (selServico) {
+        const val = selServico.value;
+        const ativos = servicosCrudCache.filter(s => s.ativo !== false);
+        selServico.innerHTML = '<option value="">Selecione o serviço...</option>' +
+            ativos.map(s => `<option value="${Number(s.id)}">${escapeHtml(s.nome)} (${formatadorMoeda.format(s.preco || 0)} • ${Number(s.duracaoMinutos) || 30} min)</option>`).join('');
+        if (val) selServico.value = val;
+    }
+}
+
+async function carregarHorariosLivresBalcao() {
+    const selHora = document.getElementById('balcao-hora');
+    const barbeiroId = document.getElementById('balcao-select-barbeiro')?.value;
+    const servicoId = document.getElementById('balcao-select-servico')?.value;
+    const dataIso = document.getElementById('balcao-data')?.value;
+
+    if (!selHora) return;
+    if (!barbeiroId || !dataIso) {
+        selHora.innerHTML = '<option value="">Selecione o barbeiro e a data...</option>';
+        return;
+    }
+
+    try {
+        const slots = await api.consultarDisponibilidade(barbeiroId, servicoId || null, dataIso);
+        if (!slots || !slots.length) {
+            selHora.innerHTML = '<option value="">Sem horários livres nesta data</option>';
+            return;
+        }
+        selHora.innerHTML = slots.map(st => {
+            const horaCurta = String(st).substring(0, 5).replace(/[^0-9:]/g, '');
+            return `<option value="${escapeHtml(horaCurta)}">${escapeHtml(horaCurta)}h</option>`;
+        }).join('');
+    } catch {
+        selHora.innerHTML = '<option value="">Erro ao carregar horários</option>';
+    }
+}
+
 function configurarEventosGestor() {
     if (gestorEventosConfigurados) return;
     gestorEventosConfigurados = true;
+
+    // Alternância das abas operacionais
+    document.querySelectorAll('.gestor-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => selecionarAbaOperacional(btn.dataset.tab));
+    });
 
     document.getElementById('btn-aplicar-periodo')?.addEventListener('click', () => {
         document.querySelectorAll('.period-Quick-presets .chip-date').forEach(b => b.classList.remove('active'));
         atualizarRelatorioEHistoricoGestor();
     });
+
+    document.getElementById('btn-exportar-csv')?.addEventListener('click', exportarHistoricoCsv);
 
     document.querySelectorAll('.period-Quick-presets .chip-date').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1213,11 +1552,13 @@ function configurarEventosGestor() {
             await api.atualizarPercentualComissaoBarbeiro(barbeiroId, percentual);
             showToast(`Percentual fixo do barbeiro atualizado para ${percentual}%!`, 'success');
             await atualizarRelatorioEHistoricoGestor();
+            await carregarDadosOperacionaisGestor();
         } catch (err) {
             showToast(err.message, 'error');
         }
     });
 
+    // Modal Concluir Atendimento
     document.getElementById('btn-fechar-modal-concluir')?.addEventListener('click', () => {
         document.getElementById('modal-concluir-atendimento').style.display = 'none';
     });
@@ -1237,5 +1578,161 @@ function configurarEventosGestor() {
             showToast(err.message, 'error');
         }
     });
+
+    // Modal Reagendar Atendimento
+    document.getElementById('btn-fechar-modal-reagendar')?.addEventListener('click', () => {
+        document.getElementById('modal-reagendar-atendimento').style.display = 'none';
+    });
+
+    document.getElementById('form-reagendar-atendimento')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('reagendar-agendamento-id').value;
+        const novaData = document.getElementById('reagendar-nova-data').value;
+        const novaHora = document.getElementById('reagendar-nova-hora').value;
+        const nota = document.getElementById('reagendar-nota').value.trim();
+
+        if (!novaData || !novaHora || !nota) {
+            showToast('Preencha a nova data, horário e a nota de alteração.', 'error');
+            return;
+        }
+
+        const horaFormatada = novaHora.length === 5 ? `${novaHora}:00` : novaHora;
+        const novaDataHoraIso = `${novaData}T${horaFormatada}`;
+
+        try {
+            await api.alterarHorarioAgendamento(id, novaDataHoraIso, nota);
+            document.getElementById('modal-reagendar-atendimento').style.display = 'none';
+            showToast('Horário do agendamento atualizado com sucesso!', 'success');
+            await carregarPainelGestorOuBarbeiro();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    // Aba Reserva Rápida de Balcão (Não-Usuário vs Cliente Cadastrado)
+    document.querySelectorAll('input[name="balcao-tipo-cliente"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const isNaoUsuario = e.target.value === 'nao-usuario';
+            document.getElementById('box-balcao-nao-usuario').style.display = isNaoUsuario ? 'grid' : 'none';
+            document.getElementById('box-balcao-cadastrado').style.display = isNaoUsuario ? 'none' : 'grid';
+        });
+    });
+
+    document.getElementById('balcao-select-barbeiro')?.addEventListener('change', carregarHorariosLivresBalcao);
+    document.getElementById('balcao-select-servico')?.addEventListener('change', carregarHorariosLivresBalcao);
+    document.getElementById('balcao-data')?.addEventListener('change', carregarHorariosLivresBalcao);
+
+    document.getElementById('form-gestor-agendamento-balcao')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const tipo = document.querySelector('input[name="balcao-tipo-cliente"]:checked')?.value || 'nao-usuario';
+        const barbeiroId = Number(document.getElementById('balcao-select-barbeiro')?.value);
+        const servicoId = Number(document.getElementById('balcao-select-servico')?.value);
+        const dataIso = document.getElementById('balcao-data')?.value;
+        const hora = document.getElementById('balcao-hora')?.value;
+
+        if (!barbeiroId || !servicoId || !dataIso || !hora) {
+            showToast('Selecione barbeiro, serviço, data e um horário disponível.', 'error');
+            return;
+        }
+
+        const horaFormatada = hora.length === 5 ? `${hora}:00` : hora;
+        const payload = {
+            barbeiroId,
+            servicoId,
+            dataHora: `${dataIso}T${horaFormatada}`
+        };
+
+        if (tipo === 'cadastrado') {
+            const clienteId = Number(document.getElementById('balcao-select-cliente')?.value);
+            if (!clienteId) {
+                showToast('Selecione o cliente cadastrado.', 'error');
+                return;
+            }
+            payload.clienteId = clienteId;
+        } else {
+            const nomeAvulso = document.getElementById('balcao-nome-avulso')?.value.trim();
+            const telAvulso = document.getElementById('balcao-telefone-avulso')?.value.trim();
+            if (!nomeAvulso) {
+                showToast('Informe o nome do cliente (não-usuário) para reservar o horário.', 'error');
+                return;
+            }
+            payload.nomeNaoUsuario = nomeAvulso;
+            payload.telefoneNaoUsuario = telAvulso || null;
+        }
+
+        try {
+            const criado = await api.criarAgendamento(payload);
+            showToast(`Reserva #${criado.id} registrada com sucesso!`, 'success');
+            document.getElementById('balcao-nome-avulso').value = '';
+            document.getElementById('balcao-telefone-avulso').value = '';
+            await carregarPainelGestorOuBarbeiro();
+            selecionarAbaOperacional('agenda');
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    // Aba Equipe de Barbeiros (Criar / Atualizar)
+    document.getElementById('btn-cancelar-edicao-barbeiro')?.addEventListener('click', resetarFormBarbeiro);
+
+    document.getElementById('form-gestor-barbeiro')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const idEdicao = document.getElementById('gestor-barbeiro-id').value;
+        const nome = document.getElementById('gestor-barbeiro-nome').value.trim();
+        const email = document.getElementById('gestor-barbeiro-email').value.trim();
+        const telefone = document.getElementById('gestor-barbeiro-telefone').value.replace(/\D/g, '');
+        const senha = document.getElementById('gestor-barbeiro-senha').value.trim();
+        const percentualComissao = document.getElementById('gestor-barbeiro-comissao').value;
+
+        try {
+            if (idEdicao) {
+                await api.atualizarBarbeiro(idEdicao, { nome, email, telefone });
+                if (percentualComissao !== '') {
+                    await api.atualizarPercentualComissaoBarbeiro(idEdicao, percentualComissao);
+                }
+                showToast('Dados do barbeiro atualizados com sucesso!');
+            } else {
+                if (!senha || senha.length < 6) {
+                    showToast('Informe uma senha inicial com pelo menos 6 caracteres para o barbeiro.', 'error');
+                    return;
+                }
+                await api.cadastrarBarbeiroComAcesso({ nome, email, senha, telefone, percentualComissao });
+                showToast('Novo barbeiro cadastrado com conta de acesso ROLE_BARBEIRO!');
+            }
+            resetarFormBarbeiro();
+            await carregarCatalogo();
+            await carregarPainelGestorOuBarbeiro();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    // Aba Catálogo de Serviços (Criar / Atualizar)
+    document.getElementById('btn-cancelar-edicao-servico')?.addEventListener('click', resetarFormServico);
+
+    document.getElementById('form-gestor-servico')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const idEdicao = document.getElementById('gestor-servico-id').value;
+        const nome = document.getElementById('gestor-servico-nome').value.trim();
+        const preco = document.getElementById('gestor-servico-preco').value;
+        const duracaoMinutos = document.getElementById('gestor-servico-duracao').value;
+        const descricao = document.getElementById('gestor-servico-descricao').value.trim();
+
+        try {
+            if (idEdicao) {
+                await api.atualizarServico(idEdicao, { nome, descricao, preco, duracaoMinutos });
+                showToast('Serviço atualizado com sucesso!');
+            } else {
+                await api.criarServico({ nome, descricao, preco, duracaoMinutos });
+                showToast('Novo serviço incluído no catálogo!');
+            }
+            resetarFormServico();
+            await carregarCatalogo();
+            await carregarPainelGestorOuBarbeiro();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
 }
+
 
