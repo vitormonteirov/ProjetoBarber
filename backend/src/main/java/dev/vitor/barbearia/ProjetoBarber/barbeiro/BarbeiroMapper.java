@@ -11,7 +11,8 @@ public class BarbeiroMapper {
             model.getNome(),
             model.getEmail(),
             model.getTelefone(),
-            model.getAtivo()
+            model.getAtivo(),
+            model.getPercentualComissao()
         );
     }
 

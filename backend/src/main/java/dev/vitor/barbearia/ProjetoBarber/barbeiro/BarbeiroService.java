@@ -63,4 +63,12 @@ public class BarbeiroService {
         barbeiro.setAtivo(false);
         barbeiroRepository.save(barbeiro);
     }
+
+    @Transactional
+    public BarbeiroModel atualizarPercentualComissao(Long id, java.math.BigDecimal percentualComissao) {
+        BarbeiroModel barbeiro = barbeiroRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Barbeiro não encontrado com ID: " + id));
+        barbeiro.setPercentualComissao(percentualComissao.setScale(2, java.math.RoundingMode.HALF_UP));
+        return barbeiroRepository.save(barbeiro);
+    }
 }

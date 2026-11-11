@@ -10,6 +10,8 @@ import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteModel;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteService;
 import dev.vitor.barbearia.ProjetoBarber.exceptions.BusinessRuleException;
 import dev.vitor.barbearia.ProjetoBarber.exceptions.ResourceNotFoundException;
+import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoModel;
+import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoRepository;
 import dev.vitor.barbearia.ProjetoBarber.servico.ServicoModel;
 import dev.vitor.barbearia.ProjetoBarber.servico.ServicoService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -30,15 +33,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AgendamentoService {
 
+    private static final BigDecimal CEM = new BigDecimal("100");
+
     private final AgendamentoRepository agendamentoRepository;
     private final ClienteService clienteService;
     private final BarbeiroService barbeiroService;
     private final ServicoService servicoService;
     private final ApplicationEventPublisher eventPublisher;
+    private final AtendimentoHistoricoRepository historicoRepository;
 
     @Transactional(readOnly = true)
     public Page<AgendamentoModel> listarTodos(Pageable pageable) {
         return agendamentoRepository.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AgendamentoModel> listarPorStatus(StatusAgendamento status, Pageable pageable) {
+        return agendamentoRepository.findByStatusOrderByDataHoraAsc(status, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -140,6 +151,9 @@ public class AgendamentoService {
         if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
             throw new BusinessRuleException("Este agendamento já se encontra cancelado.");
         }
+        if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
+            throw new BusinessRuleException("Atendimentos já concluídos não podem ser cancelados.");
+        }
 
         LocalDateTime limiteCancelamento = agendamento.getDataHora().minusHours(1);
         if (LocalDateTime.now().isAfter(limiteCancelamento)) {
@@ -199,6 +213,9 @@ public class AgendamentoService {
         if (agendamento.getStatus() == StatusAgendamento.CANCELADO) {
             throw new BusinessRuleException("Este agendamento já se encontra cancelado.");
         }
+        if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
+            throw new BusinessRuleException("Atendimentos já concluídos não podem ser cancelados.");
+        }
 
         String papel = isGestor ? "Gestor" : "Barbeiro";
         agendamento.setStatus(StatusAgendamento.CANCELADO);
@@ -207,6 +224,72 @@ public class AgendamentoService {
         AgendamentoModel salvo = agendamentoRepository.save(agendamento);
         eventPublisher.publishEvent(new AgendamentoCanceladoEvent(salvo));
         return salvo;
+    }
+
+    /**
+     * Conclui um atendimento: marca o agendamento como CONCLUIDO e grava um snapshot imutável
+     * em {@code atendimento_historico} com valor pago, forma de pagamento e comissão vigente.
+     */
+    @Transactional
+    public AtendimentoHistoricoModel concluirAtendimento(Long agendamentoId, String emailSolicitante, boolean isGestor, ConcluirAtendimentoDTO dto) {
+        AgendamentoModel agendamento = agendamentoRepository.findById(agendamentoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado com ID: " + agendamentoId));
+
+        BarbeiroModel barbeiro = agendamento.getBarbeiro();
+        if (!isGestor && !barbeiro.getEmail().equalsIgnoreCase(emailSolicitante)) {
+            throw new BusinessRuleException("Você só pode concluir atendimentos da sua própria agenda.");
+        }
+        if (agendamento.getStatus() != StatusAgendamento.AGENDADO) {
+            throw new BusinessRuleException("Apenas agendamentos com status AGENDADO podem ser concluídos.");
+        }
+        if (agendamento.getDataHora().isAfter(LocalDateTime.now())) {
+            throw new BusinessRuleException("Não é possível concluir um atendimento que ainda não começou.");
+        }
+        if (historicoRepository.existsByAgendamentoId(agendamentoId)) {
+            throw new BusinessRuleException("Este atendimento já foi registrado no histórico.");
+        }
+
+        ServicoModel servico = agendamento.getServico();
+        BigDecimal valorTabela = agendamento.getPreco() != null
+                ? agendamento.getPreco()
+                : (servico != null ? servico.getPreco() : null);
+
+        BigDecimal valorPago = dto.valorPago() != null ? dto.valorPago() : valorTabela;
+        if (valorPago == null) {
+            throw new BusinessRuleException("Informe o valor pago: este atendimento não possui preço de serviço associado.");
+        }
+        valorPago = valorPago.setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal percentual = barbeiro.getPercentualComissao() != null
+                ? barbeiro.getPercentualComissao()
+                : BarbeiroModel.PERCENTUAL_COMISSAO_PADRAO;
+        BigDecimal valorComissao = valorPago.multiply(percentual).divide(CEM, 2, RoundingMode.HALF_UP);
+
+        ClienteModel cliente = agendamento.getCliente();
+
+        AtendimentoHistoricoModel historico = AtendimentoHistoricoModel.builder()
+                .agendamentoId(agendamento.getId())
+                .barbeiroId(barbeiro.getId())
+                .barbeiroNome(barbeiro.getNome())
+                .servicoId(servico != null ? servico.getId() : null)
+                .servicoNome(servico != null ? servico.getNome() : "Atendimento avulso")
+                .clienteId(cliente != null ? cliente.getId() : null)
+                .clienteNome(cliente != null ? cliente.getNome() : agendamento.getNomeNaoUsuario())
+                .clienteNaoUsuario(cliente == null)
+                .dataHoraAtendimento(agendamento.getDataHora())
+                .dataHoraConclusao(LocalDateTime.now())
+                .valorTabela(valorTabela)
+                .valorPago(valorPago)
+                .formaPagamento(dto.formaPagamento())
+                .percentualComissao(percentual)
+                .valorComissao(valorComissao)
+                .concluidoPor(emailSolicitante)
+                .build();
+
+        agendamento.setStatus(StatusAgendamento.CONCLUIDO);
+        agendamentoRepository.save(agendamento);
+
+        return historicoRepository.save(historico);
     }
 
     @Transactional(readOnly = true)

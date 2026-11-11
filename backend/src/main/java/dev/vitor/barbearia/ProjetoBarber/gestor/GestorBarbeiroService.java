@@ -39,7 +39,30 @@ public class GestorBarbeiroService {
 
         // 2. Cria a entidade de domínio BarbeiroModel
         BarbeiroModel barbeiro = barbeiroService.criar(new BarbeiroDTO(dto.nome(), dto.email(), dto.telefone()));
+        if (dto.percentualComissao() != null) {
+            barbeiro = barbeiroService.atualizarPercentualComissao(barbeiro.getId(), dto.percentualComissao());
+        }
 
-        return new BarbeiroResponseDTO(barbeiro.getId(), barbeiro.getNome(), barbeiro.getEmail(), barbeiro.getTelefone(), barbeiro.getAtivo());
+        return new BarbeiroResponseDTO(
+                barbeiro.getId(),
+                barbeiro.getNome(),
+                barbeiro.getEmail(),
+                barbeiro.getTelefone(),
+                barbeiro.getAtivo(),
+                barbeiro.getPercentualComissao()
+        );
+    }
+
+    @Transactional
+    public BarbeiroResponseDTO atualizarComissao(Long barbeiroId, AtualizarComissaoBarbeiroDTO dto) {
+        BarbeiroModel barbeiro = barbeiroService.atualizarPercentualComissao(barbeiroId, dto.percentualComissao());
+        return new BarbeiroResponseDTO(
+                barbeiro.getId(),
+                barbeiro.getNome(),
+                barbeiro.getEmail(),
+                barbeiro.getTelefone(),
+                barbeiro.getAtivo(),
+                barbeiro.getPercentualComissao()
+        );
     }
 }

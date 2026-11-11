@@ -54,6 +54,9 @@ public class SecurityConfigurations {
                     // Rotas restritas para Gestor
                     req.requestMatchers("/api/gestor/**").hasRole("GESTOR");
 
+                    // Ações sobre agendamentos compartilhadas entre Barbeiro (própria agenda) e Gestor
+                    req.requestMatchers("/api/barbeiro/agendamentos/**").hasAnyRole("BARBEIRO", "GESTOR");
+
                     // Rotas restritas para Barbeiro
                     req.requestMatchers("/api/barbeiro/**").hasRole("BARBEIRO");
 

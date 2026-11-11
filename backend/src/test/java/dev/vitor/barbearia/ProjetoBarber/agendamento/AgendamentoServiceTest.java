@@ -6,6 +6,8 @@ import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroService;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteModel;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteService;
 import dev.vitor.barbearia.ProjetoBarber.exceptions.BusinessRuleException;
+import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoModel;
+import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoRepository;
 import dev.vitor.barbearia.ProjetoBarber.servico.ServicoModel;
 import dev.vitor.barbearia.ProjetoBarber.servico.ServicoService;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +45,9 @@ class AgendamentoServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private AtendimentoHistoricoRepository historicoRepository;
 
     @InjectMocks
     private AgendamentoService agendamentoService;
@@ -157,5 +162,37 @@ class AgendamentoServiceTest {
         when(agendamentoRepository.findById(10L)).thenReturn(Optional.of(agendamento));
 
         assertThrows(BusinessRuleException.class, () -> agendamentoService.cancelar(10L));
+    }
+
+    @Test
+    @DisplayName("Deve concluir atendimento e gravar snapshot imutável no histórico com comissão calculada")
+    void deveConcluirAtendimentoEGravarHistorico() {
+        barbeiro.setPercentualComissao(new BigDecimal("40.00"));
+        AgendamentoModel agendamento = AgendamentoModel.builder()
+                .id(20L)
+                .cliente(cliente)
+                .barbeiro(barbeiro)
+                .servico(servico)
+                .dataHora(LocalDateTime.now().minusMinutes(30))
+                .preco(new BigDecimal("50.00"))
+                .status(StatusAgendamento.AGENDADO)
+                .build();
+
+        when(agendamentoRepository.findById(20L)).thenReturn(Optional.of(agendamento));
+        when(historicoRepository.existsByAgendamentoId(20L)).thenReturn(false);
+        when(historicoRepository.save(any(AtendimentoHistoricoModel.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ConcluirAtendimentoDTO dto = new ConcluirAtendimentoDTO(new BigDecimal("60.00"), FormaPagamento.PIX);
+        AtendimentoHistoricoModel historico = agendamentoService.concluirAtendimento(
+                20L, "carlos@barber.com", false, dto);
+
+        assertEquals(StatusAgendamento.CONCLUIDO, agendamento.getStatus());
+        assertEquals("Carlos", historico.getBarbeiroNome());
+        assertEquals("Corte Degrade", historico.getServicoNome());
+        assertEquals(new BigDecimal("60.00"), historico.getValorPago());
+        assertEquals(FormaPagamento.PIX, historico.getFormaPagamento());
+        assertEquals(new BigDecimal("40.00"), historico.getPercentualComissao());
+        assertEquals(new BigDecimal("24.00"), historico.getValorComissao());
     }
 }

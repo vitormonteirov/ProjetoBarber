@@ -27,8 +27,12 @@ public class AgendamentoController {
 
     @GetMapping
     @PreAuthorize("hasRole('GESTOR')")
-    public ResponseEntity<Page<AgendamentoResponseDTO>> listar(@PageableDefault(size = 10) Pageable pageable) {
-        Page<AgendamentoModel> agendamentos = agendamentoService.listarTodos(pageable);
+    public ResponseEntity<Page<AgendamentoResponseDTO>> listar(
+            @RequestParam(required = false) StatusAgendamento status,
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<AgendamentoModel> agendamentos = status != null
+                ? agendamentoService.listarPorStatus(status, pageable)
+                : agendamentoService.listarTodos(pageable);
         return ResponseEntity.ok(agendamentos.map(agendamentoMapper::toResponseDTO));
     }
 

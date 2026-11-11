@@ -4,6 +4,9 @@ import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoMapper;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoModel;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoResponseDTO;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoService;
+import dev.vitor.barbearia.ProjetoBarber.agendamento.ConcluirAtendimentoDTO;
+import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoModel;
+import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -58,5 +61,19 @@ public class BarbeiroAgendaController {
         AgendamentoModel cancelado = agendamentoService.cancelarPeloBarbeiroOuGestor(
                 id, userDetails.getUsername(), isGestor, dto);
         return ResponseEntity.ok(agendamentoMapper.toResponseDTO(cancelado));
+    }
+
+    @PatchMapping("/agendamentos/{id}/concluir")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
+    public ResponseEntity<AtendimentoHistoricoResponseDTO> concluirAtendimento(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody @Valid ConcluirAtendimentoDTO dto) {
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+
+        AtendimentoHistoricoModel historico = agendamentoService.concluirAtendimento(
+                id, userDetails.getUsername(), isGestor, dto);
+        return ResponseEntity.ok(AtendimentoHistoricoResponseDTO.from(historico));
     }
 }

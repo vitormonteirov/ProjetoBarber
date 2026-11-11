@@ -1,8 +1,12 @@
 package dev.vitor.barbearia.ProjetoBarber.gestor;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+
+import java.math.BigDecimal;
 
 public record CriarBarbeiroUserDTO(
     @NotBlank(message = "O nome é obrigatório.")
@@ -17,5 +21,13 @@ public record CriarBarbeiroUserDTO(
     String senha,
 
     @NotBlank(message = "O telefone é obrigatório.")
-    String telefone
-) {}
+    String telefone,
+
+    @DecimalMin(value = "0.00", message = "O percentual de comissão não pode ser menor que 0%.")
+    @DecimalMax(value = "100.00", message = "O percentual de comissão não pode ultrapassar 100%.")
+    BigDecimal percentualComissao
+) {
+    public CriarBarbeiroUserDTO(String nome, String email, String senha, String telefone) {
+        this(nome, email, senha, telefone, null);
+    }
+}
