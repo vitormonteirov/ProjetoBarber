@@ -1,8 +1,19 @@
 /**
  * Camada de Integração HTTP com a API Spring Boot (ProjetoBarber)
- * Backend URL: http://localhost:8080/api
+ * Em desenvolvimento local (Live Server / file://) aponta para http://localhost:8080/api;
+ * em produção (VPS / Docker com Nginx proxy) utiliza '/api' na mesma origem.
  */
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = (() => {
+    const { protocol, hostname, port } = window.location;
+    if (protocol === 'file:') {
+        return 'http://localhost:8080/api';
+    }
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (isLocalHost && port && port !== '80' && port !== '443') {
+        return 'http://localhost:8080/api';
+    }
+    return '/api';
+})();
 
 const api = {
     // --- GERENCIAMENTO DE SESSÃO / JWT ---
@@ -94,6 +105,21 @@ const api = {
         });
         this.setSession(data);
         return data;
+    },
+
+    async renovarSessao() {
+        const data = await this.request('/auth/refresh', {
+            method: 'POST'
+        });
+        this.setSession(data);
+        return data;
+    },
+
+    async alterarSenha(senhaAtual, novaSenha) {
+        return await this.request('/auth/alterar-senha', {
+            method: 'PATCH',
+            body: JSON.stringify({ senhaAtual, novaSenha })
+        });
     },
 
     // --- BARBEIROS (Público) ---
