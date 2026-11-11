@@ -105,6 +105,9 @@ public class AgendamentoService {
         LocalDateTime inicio = dto.dataHora();
         LocalDateTime fim = inicio.plusMinutes(duracaoMinutos);
 
+        // Regra 0: Valida se o horário solicitado respeita o expediente e o intervalo de pausa do barbeiro
+        validarDentroDoExpedienteEPausa(barbeiro, inicio.toLocalTime(), fim.toLocalTime());
+
         // Regra 1: Limite diário de agendamento por dia do cliente com o mesmo barbeiro (apenas para cliente cadastrado)
         if (cliente != null) {
             LocalDateTime inicioDia = dto.dataHora().toLocalDate().atStartOfDay();
@@ -167,6 +170,9 @@ public class AgendamentoService {
         if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
             throw new BusinessRuleException("Atendimentos já concluídos não podem ser cancelados.");
         }
+        if (agendamento.getStatus() == StatusAgendamento.NAO_COMPARECEU) {
+            throw new BusinessRuleException("Agendamentos já registrados como não comparecimento (No-Show) não podem ser cancelados.");
+        }
 
         LocalDateTime limiteCancelamento = agendamento.getDataHora().minusHours(1);
         if (LocalDateTime.now().isAfter(limiteCancelamento)) {
@@ -193,11 +199,14 @@ public class AgendamentoService {
         }
 
         // Lock pessimista na agenda do barbeiro para evitar sobreposições concorrentes
-        barbeiroService.buscarPorIdComLock(agendamento.getBarbeiro().getId());
+        BarbeiroModel barbeiro = barbeiroService.buscarPorIdComLock(agendamento.getBarbeiro().getId())
+                .orElse(agendamento.getBarbeiro());
 
         int duracao = agendamento.getServico() != null ? agendamento.getServico().getDuracaoMinutos() : 30;
         LocalDateTime novoInicio = dto.novaDataHora();
         LocalDateTime novoFim = novoInicio.plusMinutes(duracao);
+
+        validarDentroDoExpedienteEPausa(barbeiro, novoInicio.toLocalTime(), novoFim.toLocalTime());
 
         boolean conflito = agendamentoRepository.existsConflitoHorarioBarbeiroIgnorandoId(
                 agendamento.getBarbeiro().getId(), novoInicio, novoFim, StatusAgendamento.AGENDADO, agendamento.getId());
@@ -229,6 +238,9 @@ public class AgendamentoService {
         if (agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
             throw new BusinessRuleException("Atendimentos já concluídos não podem ser cancelados.");
         }
+        if (agendamento.getStatus() == StatusAgendamento.NAO_COMPARECEU) {
+            throw new BusinessRuleException("Agendamentos já registrados como não comparecimento (No-Show) não podem ser cancelados.");
+        }
 
         String papel = isGestor ? "Gestor" : "Barbeiro";
         agendamento.setStatus(StatusAgendamento.CANCELADO);
@@ -237,6 +249,31 @@ public class AgendamentoService {
         AgendamentoModel salvo = agendamentoRepository.save(agendamento);
         eventPublisher.publishEvent(new AgendamentoCanceladoEvent(salvo));
         return salvo;
+    }
+
+    /**
+     * Registra ausência do cliente (No-Show): altera o status do agendamento para {@code NAO_COMPARECEU}
+     * sem gerar faturamento nem comissão no histórico financeiro.
+     */
+    @Transactional
+    public AgendamentoModel marcarNaoCompareceu(Long agendamentoId, String emailSolicitante, boolean isGestor, String observacao) {
+        AgendamentoModel agendamento = agendamentoRepository.findById(agendamentoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agendamento não encontrado com ID: " + agendamentoId));
+
+        if (!isGestor && !agendamento.getBarbeiro().getEmail().equalsIgnoreCase(emailSolicitante)) {
+            throw new BusinessRuleException("Você só pode registrar ausência em agendamentos da sua própria agenda.");
+        }
+
+        if (agendamento.getStatus() != StatusAgendamento.AGENDADO) {
+            throw new BusinessRuleException("Apenas agendamentos com status AGENDADO podem ser marcados como Não Compareceu (No-Show).");
+        }
+
+        String papel = isGestor ? "Gestor" : "Barbeiro";
+        String detalhe = (observacao != null && !observacao.isBlank()) ? observacao.trim() : "Cliente não compareceu no horário agendado";
+        agendamento.setStatus(StatusAgendamento.NAO_COMPARECEU);
+        agendamento.setNotaAlteracao("No-Show registrado pelo " + papel + " (" + emailSolicitante + "): " + detalhe);
+
+        return agendamentoRepository.save(agendamento);
     }
 
     /**
@@ -314,9 +351,17 @@ public class AgendamentoService {
             duracaoMinutos = servico.getDuracaoMinutos();
         }
 
-        // Horário de funcionamento padrão: 08:00 às 19:00
-        LocalTime inicioExpediente = LocalTime.of(8, 0);
-        LocalTime fimExpediente = LocalTime.of(19, 0);
+        BarbeiroModel barbeiro = barbeiroService.buscarPorId(barbeiroId).orElse(null);
+
+        LocalTime inicioExpediente = (barbeiro != null && barbeiro.getHorarioInicioExpediente() != null)
+                ? barbeiro.getHorarioInicioExpediente()
+                : BarbeiroModel.EXPEDIENTE_INICIO_PADRAO;
+        LocalTime fimExpediente = (barbeiro != null && barbeiro.getHorarioFimExpediente() != null)
+                ? barbeiro.getHorarioFimExpediente()
+                : BarbeiroModel.EXPEDIENTE_FIM_PADRAO;
+
+        LocalTime inicioPausa = barbeiro != null ? barbeiro.getHorarioInicioPausa() : null;
+        LocalTime fimPausa = barbeiro != null ? barbeiro.getHorarioFimPausa() : null;
 
         LocalDateTime inicioDia = data.atStartOfDay();
         LocalDateTime fimDia = data.atTime(23, 59, 59);
@@ -328,11 +373,17 @@ public class AgendamentoService {
         LocalTime slot = inicioExpediente;
 
         while (!slot.plusMinutes(duracaoMinutos).isAfter(fimExpediente)) {
+            LocalTime slotFimTime = slot.plusMinutes(duracaoMinutos);
             LocalDateTime slotInicio = data.atTime(slot);
             LocalDateTime slotFim = slotInicio.plusMinutes(duracaoMinutos);
 
             // Verifica se o slot é no passado caso a data seja hoje
             boolean noPassado = slotInicio.isBefore(LocalDateTime.now());
+
+            // Verifica se o slot conflita com o intervalo de pausa/almoço do barbeiro
+            boolean emHorarioDePausa = (inicioPausa != null && fimPausa != null)
+                    && slot.isBefore(fimPausa)
+                    && slotFimTime.isAfter(inicioPausa);
 
             boolean ocupado = agendamentos.stream().anyMatch(a -> {
                 LocalDateTime aInicio = a.getDataHora();
@@ -340,7 +391,7 @@ public class AgendamentoService {
                 return slotInicio.isBefore(aFim) && slotFim.isAfter(aInicio);
             });
 
-            if (!noPassado && !ocupado) {
+            if (!noPassado && !emHorarioDePausa && !ocupado) {
                 horariosLivres.add(slot);
             }
 
@@ -348,5 +399,31 @@ public class AgendamentoService {
         }
 
         return horariosLivres;
+    }
+
+    private void validarDentroDoExpedienteEPausa(BarbeiroModel barbeiro, LocalTime inicioSlot, LocalTime fimSlot) {
+        LocalTime inicioExpediente = (barbeiro != null && barbeiro.getHorarioInicioExpediente() != null)
+                ? barbeiro.getHorarioInicioExpediente()
+                : BarbeiroModel.EXPEDIENTE_INICIO_PADRAO;
+        LocalTime fimExpediente = (barbeiro != null && barbeiro.getHorarioFimExpediente() != null)
+                ? barbeiro.getHorarioFimExpediente()
+                : BarbeiroModel.EXPEDIENTE_FIM_PADRAO;
+
+        // Verifica também se o serviço cruzou a meia-noite (fimSlot < inicioSlot)
+        if (fimSlot.isBefore(inicioSlot) || inicioSlot.isBefore(inicioExpediente) || fimSlot.isAfter(fimExpediente)) {
+            throw new BusinessRuleException(String.format(
+                    "O horário solicitado (%s às %s) está fora do expediente do barbeiro (%s às %s).",
+                    inicioSlot, fimSlot, inicioExpediente, fimExpediente));
+        }
+
+        if (barbeiro != null && barbeiro.getHorarioInicioPausa() != null && barbeiro.getHorarioFimPausa() != null) {
+            LocalTime inicioPausa = barbeiro.getHorarioInicioPausa();
+            LocalTime fimPausa = barbeiro.getHorarioFimPausa();
+            if (inicioSlot.isBefore(fimPausa) && fimSlot.isAfter(inicioPausa)) {
+                throw new BusinessRuleException(String.format(
+                        "O horário solicitado (%s às %s) conflita com o intervalo de pausa/almoço do barbeiro (%s às %s).",
+                        inicioSlot, fimSlot, inicioPausa, fimPausa));
+            }
+        }
     }
 }

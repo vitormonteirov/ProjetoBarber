@@ -37,32 +37,41 @@ public class GestorBarbeiroService {
                 .build();
         usuarioRepository.save(usuario);
 
-        // 2. Cria a entidade de domínio BarbeiroModel
-        BarbeiroModel barbeiro = barbeiroService.criar(new BarbeiroDTO(dto.nome(), dto.email(), dto.telefone()));
+        // 2. Cria a entidade de domínio BarbeiroModel com expediente e pausa configurados
+        BarbeiroModel barbeiro = barbeiroService.criar(new BarbeiroDTO(
+                dto.nome(),
+                dto.email(),
+                dto.telefone(),
+                dto.horarioInicioExpediente(),
+                dto.horarioFimExpediente(),
+                dto.horarioInicioPausa(),
+                dto.horarioFimPausa()
+        ));
         if (dto.percentualComissao() != null) {
             barbeiro = barbeiroService.atualizarPercentualComissao(barbeiro.getId(), dto.percentualComissao());
         }
 
-        return new BarbeiroResponseDTO(
-                barbeiro.getId(),
-                barbeiro.getNome(),
-                barbeiro.getEmail(),
-                barbeiro.getTelefone(),
-                barbeiro.getAtivo(),
-                barbeiro.getPercentualComissao()
-        );
+        return toResponseDTO(barbeiro);
     }
 
     @Transactional
     public BarbeiroResponseDTO atualizarComissao(Long barbeiroId, AtualizarComissaoBarbeiroDTO dto) {
         BarbeiroModel barbeiro = barbeiroService.atualizarPercentualComissao(barbeiroId, dto.percentualComissao());
+        return toResponseDTO(barbeiro);
+    }
+
+    private BarbeiroResponseDTO toResponseDTO(BarbeiroModel barbeiro) {
         return new BarbeiroResponseDTO(
                 barbeiro.getId(),
                 barbeiro.getNome(),
                 barbeiro.getEmail(),
                 barbeiro.getTelefone(),
                 barbeiro.getAtivo(),
-                barbeiro.getPercentualComissao()
+                barbeiro.getPercentualComissao(),
+                barbeiro.getHorarioInicioExpediente(),
+                barbeiro.getHorarioFimExpediente(),
+                barbeiro.getHorarioInicioPausa(),
+                barbeiro.getHorarioFimPausa()
         );
     }
 }

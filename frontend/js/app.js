@@ -834,19 +834,27 @@ async function abrirModalMeusAgendamentos() {
             const dataFormatada = dataHoraObj.toLocaleDateString('pt-BR');
             const horaFormatada = dataHoraObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             const isCancelado = a.status === 'CANCELADO';
+            const isNoShow = a.status === 'NAO_COMPARECEU';
+            const isConcluido = a.status === 'CONCLUIDO';
+
+            let acaoOuBadge = '';
+            if (isCancelado) {
+                acaoOuBadge = '<span class="barber-status-badge" style="color: var(--danger); background: var(--danger-bg);">Cancelado</span>';
+            } else if (isNoShow) {
+                acaoOuBadge = '<span class="barber-status-badge" style="color: var(--warning);">Não Compareceu (No-Show)</span>';
+            } else if (isConcluido) {
+                acaoOuBadge = '<span class="barber-status-badge">Concluído</span>';
+            } else {
+                acaoOuBadge = `<button type="button" class="btn btn-outline-sm" onclick="cancelarAgendamentoModal(${Number(a.id)})" style="border-color: var(--danger); color: var(--danger);">Cancelar</button>`;
+            }
 
             return `
-                <div class="appointment-item-card ${isCancelado ? 'cancelado' : ''}">
+                <div class="appointment-item-card ${(isCancelado || isNoShow) ? 'cancelado' : ''}">
                     <div class="app-item-info">
                         <h4>${escapeHtml(a.servicoNome || 'Serviço Agendado')}</h4>
                         <p>Barbeiro: ${escapeHtml(a.barbeiroNome)} • 📅 ${escapeHtml(dataFormatada)} às ${escapeHtml(horaFormatada)}h</p>
                     </div>
-                    <div>
-                        ${isCancelado 
-                            ? '<span class="barber-status-badge" style="color: var(--danger); background: var(--danger-bg);">Cancelado</span>' 
-                            : `<button type="button" class="btn btn-outline-sm" onclick="cancelarAgendamentoModal(${Number(a.id)})" style="border-color: var(--danger); color: var(--danger);">Cancelar</button>`
-                        }
-                    </div>
+                    <div>${acaoOuBadge}</div>
                 </div>
             `;
         }).join('');
@@ -991,7 +999,7 @@ function renderizarKpisRelatorio(rel) {
     document.getElementById('kpi-ticket-medio').textContent = `Ticket médio: ${formatadorMoeda.format(rel.ticketMedio || 0)}`;
     document.getElementById('kpi-atendimentos-realizados').textContent = String(rel.totalAtendimentosRealizados || 0);
     document.getElementById('kpi-pendentes-cancelados').textContent =
-        `${rel.agendamentosPendentesNoPeriodo || 0} agendados • ${rel.agendamentosCanceladosNoPeriodo || 0} cancelados`;
+        `${rel.agendamentosPendentesNoPeriodo || 0} agendados • ${rel.agendamentosCanceladosNoPeriodo || 0} cancelados • ${rel.agendamentosNaoCompareceuNoPeriodo || 0} faltas`;
     document.getElementById('kpi-comissao-total').textContent = formatadorMoeda.format(rel.comissaoTotal || 0);
     document.getElementById('kpi-lucro-liquido').textContent = formatadorMoeda.format(rel.lucroLiquido || 0);
 }
@@ -1220,6 +1228,9 @@ async function carregarFilaConclusao() {
                         <button type="button" class="btn btn-outline-sm" onclick="abrirModalReagendarPorId(${Number(a.id)})">
                             🕒 Alterar Horário
                         </button>
+                        <button type="button" class="btn btn-outline-sm" style="border-color: var(--warning); color: var(--warning);" onclick="marcarNaoCompareceuPorId(${Number(a.id)})" title="Registrar que o cliente faltou (No-Show) sem gerar cobrança">
+                            🚫 Não Compareceu
+                        </button>
                         <button type="button" class="btn btn-outline-sm" style="border-color: var(--danger); color: var(--danger);" onclick="cancelarAgendamentoOperacionalPorId(${Number(a.id)})">
                             ✕ Cancelar
                         </button>
@@ -1267,6 +1278,18 @@ window.cancelarAgendamentoOperacionalPorId = async function(id) {
     }
 };
 
+window.marcarNaoCompareceuPorId = async function(id) {
+    const obs = prompt('Registrar ausência (No-Show) do cliente. Observação opcional:', 'Cliente não compareceu no horário agendado');
+    if (obs === null) return;
+    try {
+        await api.marcarNaoCompareceu(id, obs.trim());
+        showToast('Ausência (No-Show) registrada com sucesso!', 'info');
+        await carregarPainelGestorOuBarbeiro();
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
+};
+
 // =========================================================================
 // DADOS E CRUD DAS ABAS OPERACIONAIS DO GESTOR (BARBEIROS, SERVIÇOS E BALCÃO)
 // =========================================================================
@@ -1291,6 +1314,11 @@ async function carregarDadosOperacionaisGestor() {
     }
 }
 
+function formatarHoraCurta(horaStr, fallback = '') {
+    if (!horaStr) return fallback;
+    return String(horaStr).substring(0, 5);
+}
+
 function renderizarListaBarbeirosCrud() {
     const container = document.getElementById('lista-gestor-barbeiros-crud');
     if (!container) return;
@@ -1303,11 +1331,20 @@ function renderizarListaBarbeirosCrud() {
     container.innerHTML = barbeirosCrudCache.map(b => {
         const ativo = b.ativo !== false;
         const pct = b.percentualComissao ?? 50;
+        const expIni = formatarHoraCurta(b.horarioInicioExpediente, '08:00');
+        const expFim = formatarHoraCurta(b.horarioFimExpediente, '19:00');
+        const pausaIni = formatarHoraCurta(b.horarioInicioPausa);
+        const pausaFim = formatarHoraCurta(b.horarioFimPausa);
+        const textoPausa = (pausaIni && pausaFim)
+            ? ` • ☕ Pausa: ${escapeHtml(pausaIni)}–${escapeHtml(pausaFim)}`
+            : ' • Sem pausa fixa';
+
         return `
             <div class="crud-item-card ${ativo ? '' : 'inativo'}">
                 <div class="crud-item-info">
                     <h4>${escapeHtml(b.nome)} ${ativo ? '<span class="barber-status-badge">Ativo</span>' : '<span class="barber-status-badge" style="color: var(--warning);">Inativo</span>'}</h4>
                     <p>📧 ${escapeHtml(b.email)} • 📱 ${escapeHtml(b.telefone)} • Comissão: <strong>${escapeHtml(pct)}%</strong></p>
+                    <p><small>🕒 Expediente: <strong>${escapeHtml(expIni)} às ${escapeHtml(expFim)}</strong>${textoPausa}</small></p>
                 </div>
                 <div class="crud-item-actions">
                     <button type="button" class="btn btn-outline-sm" onclick="prepararEdicaoBarbeiro(${Number(b.id)})">Editar</button>
@@ -1329,6 +1366,10 @@ window.prepararEdicaoBarbeiro = function(id) {
     document.getElementById('gestor-barbeiro-email').value = b.email || '';
     document.getElementById('gestor-barbeiro-telefone').value = b.telefone || '';
     document.getElementById('gestor-barbeiro-comissao').value = b.percentualComissao ?? 50;
+    document.getElementById('gestor-barbeiro-exp-inicio').value = formatarHoraCurta(b.horarioInicioExpediente, '08:00');
+    document.getElementById('gestor-barbeiro-exp-fim').value = formatarHoraCurta(b.horarioFimExpediente, '19:00');
+    document.getElementById('gestor-barbeiro-pausa-inicio').value = formatarHoraCurta(b.horarioInicioPausa, '');
+    document.getElementById('gestor-barbeiro-pausa-fim').value = formatarHoraCurta(b.horarioFimPausa, '');
     document.getElementById('gestor-barbeiro-senha').value = '';
     document.getElementById('group-barbeiro-senha').style.display = 'none';
     document.getElementById('titulo-form-barbeiro').textContent = `Editar Barbeiro #${b.id}`;
@@ -1339,6 +1380,10 @@ function resetarFormBarbeiro() {
     document.getElementById('form-gestor-barbeiro')?.reset();
     document.getElementById('gestor-barbeiro-id').value = '';
     document.getElementById('gestor-barbeiro-comissao').value = '50';
+    document.getElementById('gestor-barbeiro-exp-inicio').value = '08:00';
+    document.getElementById('gestor-barbeiro-exp-fim').value = '19:00';
+    document.getElementById('gestor-barbeiro-pausa-inicio').value = '';
+    document.getElementById('gestor-barbeiro-pausa-fim').value = '';
     document.getElementById('group-barbeiro-senha').style.display = 'block';
     document.getElementById('titulo-form-barbeiro').textContent = 'Cadastrar Novo Barbeiro';
     document.getElementById('btn-cancelar-edicao-barbeiro').style.display = 'none';
@@ -1683,20 +1728,42 @@ function configurarEventosGestor() {
         const telefone = document.getElementById('gestor-barbeiro-telefone').value.replace(/\D/g, '');
         const senha = document.getElementById('gestor-barbeiro-senha').value.trim();
         const percentualComissao = document.getElementById('gestor-barbeiro-comissao').value;
+        const horarioInicioExpediente = document.getElementById('gestor-barbeiro-exp-inicio')?.value || '08:00';
+        const horarioFimExpediente = document.getElementById('gestor-barbeiro-exp-fim')?.value || '19:00';
+        const horarioInicioPausa = document.getElementById('gestor-barbeiro-pausa-inicio')?.value || null;
+        const horarioFimPausa = document.getElementById('gestor-barbeiro-pausa-fim')?.value || null;
 
         try {
             if (idEdicao) {
-                await api.atualizarBarbeiro(idEdicao, { nome, email, telefone });
+                await api.atualizarBarbeiro(idEdicao, {
+                    nome,
+                    email,
+                    telefone,
+                    horarioInicioExpediente,
+                    horarioFimExpediente,
+                    horarioInicioPausa,
+                    horarioFimPausa
+                });
                 if (percentualComissao !== '') {
                     await api.atualizarPercentualComissaoBarbeiro(idEdicao, percentualComissao);
                 }
-                showToast('Dados do barbeiro atualizados com sucesso!');
+                showToast('Dados e expediente do barbeiro atualizados com sucesso!');
             } else {
                 if (!senha || senha.length < 6) {
                     showToast('Informe uma senha inicial com pelo menos 6 caracteres para o barbeiro.', 'error');
                     return;
                 }
-                await api.cadastrarBarbeiroComAcesso({ nome, email, senha, telefone, percentualComissao });
+                await api.cadastrarBarbeiroComAcesso({
+                    nome,
+                    email,
+                    senha,
+                    telefone,
+                    percentualComissao,
+                    horarioInicioExpediente,
+                    horarioFimExpediente,
+                    horarioInicioPausa,
+                    horarioFimPausa
+                });
                 showToast('Novo barbeiro cadastrado com conta de acesso ROLE_BARBEIRO!');
             }
             resetarFormBarbeiro();

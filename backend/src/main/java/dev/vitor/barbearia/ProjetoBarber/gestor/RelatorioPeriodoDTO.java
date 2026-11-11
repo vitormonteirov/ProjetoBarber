@@ -10,6 +10,7 @@ public record RelatorioPeriodoDTO(
         Long totalAtendimentosRealizados,
         Long agendamentosPendentesNoPeriodo,
         Long agendamentosCanceladosNoPeriodo,
+        Long agendamentosNaoCompareceuNoPeriodo,
         BigDecimal caixaTotal,
         BigDecimal ticketMedio,
         BigDecimal comissaoTotal,
@@ -19,6 +20,38 @@ public record RelatorioPeriodoDTO(
         List<ResumoBarbeiroPeriodoDTO> porBarbeiro,
         List<ResumoServicoPeriodoDTO> porServico
 ) {
+    public RelatorioPeriodoDTO(
+            LocalDate dataInicio,
+            LocalDate dataFim,
+            Long totalAtendimentosRealizados,
+            Long agendamentosPendentesNoPeriodo,
+            Long agendamentosCanceladosNoPeriodo,
+            BigDecimal caixaTotal,
+            BigDecimal ticketMedio,
+            BigDecimal comissaoTotal,
+            BigDecimal lucroLiquido,
+            List<CaixaPorFormaPagamentoDTO> porFormaPagamento,
+            List<CaixaDiarioDTO> porDia,
+            List<ResumoBarbeiroPeriodoDTO> porBarbeiro,
+            List<ResumoServicoPeriodoDTO> porServico
+    ) {
+        this(
+                dataInicio,
+                dataFim,
+                totalAtendimentosRealizados,
+                agendamentosPendentesNoPeriodo,
+                agendamentosCanceladosNoPeriodo,
+                0L,
+                caixaTotal,
+                ticketMedio,
+                comissaoTotal,
+                lucroLiquido,
+                porFormaPagamento,
+                porDia,
+                porBarbeiro,
+                porServico
+        );
+    }
     public record CaixaPorFormaPagamentoDTO(
             String formaPagamento,
             Long quantidade,

@@ -114,6 +114,8 @@ public class GestorDashboardService {
                 intervalo.inicio(), fimInclusivo, StatusAgendamento.AGENDADO);
         long cancelados = agendamentoRepository.countByDataHoraBetweenAndStatus(
                 intervalo.inicio(), fimInclusivo, StatusAgendamento.CANCELADO);
+        long naoCompareceram = agendamentoRepository.countByDataHoraBetweenAndStatus(
+                intervalo.inicio(), fimInclusivo, StatusAgendamento.NAO_COMPARECEU);
 
         // 1. Por forma de pagamento
         List<CaixaPorFormaPagamentoDTO> porFormaPagamento = historicoRepository
@@ -213,6 +215,7 @@ public class GestorDashboardService {
                 totalRealizados,
                 pendentes,
                 cancelados,
+                naoCompareceram,
                 caixaTotal,
                 ticketMedio,
                 comissaoTotal,

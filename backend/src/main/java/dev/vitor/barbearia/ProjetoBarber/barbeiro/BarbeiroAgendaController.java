@@ -76,4 +76,19 @@ public class BarbeiroAgendaController {
                 id, userDetails.getUsername(), isGestor, dto);
         return ResponseEntity.ok(AtendimentoHistoricoResponseDTO.from(historico));
     }
+
+    @PatchMapping("/agendamentos/{id}/nao-compareceu")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
+    public ResponseEntity<AgendamentoResponseDTO> marcarNaoCompareceu(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody(required = false) @Valid NaoCompareceuDTO dto) {
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+
+        String observacao = dto != null ? dto.observacao() : null;
+        AgendamentoModel model = agendamentoService.marcarNaoCompareceu(
+                id, userDetails.getUsername(), isGestor, observacao);
+        return ResponseEntity.ok(agendamentoMapper.toResponseDTO(model));
+    }
 }

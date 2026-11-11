@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Tenorio's Barber - Agendamento online de cortes e tratamentos com os melhores mestres das lâminas. Rápido, intuitivo e exclusivo.">
-    <title>Tenorio's Barber | Estilo, Precisão & Agendamento Online</title>
+    <title>Tenório's Barbearia | Estilo, Precisão & Agendamento Online</title>
+    <link rel="icon" type="image/png" href="assets/img/logo-tenorios.png">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,9 +19,8 @@
     <!-- NAVBAR -->
     <header class="navbar" id="top">
         <div class="container navbar-inner">
-            <a href="#" class="logo">
-                <span class="logo-icon">✂</span>
-                <span class="logo-text">TENORIO'S <span>BARBER</span></span>
+            <a href="#" class="logo" aria-label="Tenório's Barbearia - Início">
+                <img src="assets/img/logo-tenorios.png" alt="Logo Tenório's Barbearia" class="logo-img-nav">
             </a>
 
             <nav class="nav-menu">
@@ -71,8 +71,11 @@
     <section class="hero">
         <div class="hero-bg-glow"></div>
         <div class="container hero-content">
+            <div class="hero-logo-showcase">
+                <img src="assets/img/logo-tenorios.png" alt="Tenório's Barbearia" class="logo-img-hero">
+            </div>
             <div class="hero-tag">
-                <span class="sparkle">✦</span> Tradição & Tecnologia • Tenorio's Barber
+                <span class="sparkle">✦</span> Tradição & Tecnologia • Tenório's Barbearia
             </div>
             <h1 class="hero-title">
                 Eleve o seu visual.<br>
@@ -687,6 +690,26 @@
                                     <input type="number" id="gestor-barbeiro-comissao" min="0" max="100" step="0.5" value="50">
                                 </div>
                             </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-exp-inicio">Início Expediente *</label>
+                                    <input type="time" id="gestor-barbeiro-exp-inicio" class="custom-date-input w-full" value="08:00" step="1800" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-exp-fim">Fim Expediente *</label>
+                                    <input type="time" id="gestor-barbeiro-exp-fim" class="custom-date-input w-full" value="19:00" step="1800" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-pausa-inicio">Início Pausa/Almoço (opcional)</label>
+                                    <input type="time" id="gestor-barbeiro-pausa-inicio" class="custom-date-input w-full" step="1800">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-pausa-fim">Fim Pausa/Almoço (opcional)</label>
+                                    <input type="time" id="gestor-barbeiro-pausa-fim" class="custom-date-input w-full" step="1800">
+                                </div>
+                            </div>
                             <div class="calc-actions">
                                 <button type="submit" class="btn btn-primary" id="btn-salvar-barbeiro">
                                     Salvar Barbeiro
@@ -921,11 +944,13 @@
     <footer class="footer">
         <div class="container footer-inner">
             <div class="footer-brand">
-                <span class="logo">✂ TENORIO'S <span>BARBER</span></span>
+                <a href="#top" class="footer-logo-link">
+                    <img src="assets/img/logo-tenorios.png" alt="Logo Tenório's Barbearia" class="logo-img-footer">
+                </a>
                 <p>Excelência e cuidado com o seu estilo pessoal. Sistema moderno de agendamentos integrado com arquitetura Spring Boot REST.</p>
             </div>
             <div class="footer-bottom">
-                <p>© 2026 Tenorio's Barber. Todos os direitos reservados.</p>
+                <p>© 2026 Tenório's Barbearia. Todos os direitos reservados.</p>
             </div>
         </div>
     </footer>

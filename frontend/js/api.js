@@ -210,21 +210,53 @@ const api = {
     },
 
     // --- GESTÃO OPERACIONAL: BARBEIROS, SERVIÇOS, CLIENTES E REAGENDAMENTO ---
-    async cadastrarBarbeiroComAcesso({ nome, email, senha, telefone, percentualComissao }) {
+    async cadastrarBarbeiroComAcesso({
+        nome,
+        email,
+        senha,
+        telefone,
+        percentualComissao,
+        horarioInicioExpediente,
+        horarioFimExpediente,
+        horarioInicioPausa,
+        horarioFimPausa
+    }) {
         const payload = { nome, email, senha, telefone };
         if (percentualComissao !== null && percentualComissao !== undefined && percentualComissao !== '') {
             payload.percentualComissao = Number(percentualComissao);
         }
+        if (horarioInicioExpediente) payload.horarioInicioExpediente = horarioInicioExpediente;
+        if (horarioFimExpediente) payload.horarioFimExpediente = horarioFimExpediente;
+        if (horarioInicioPausa) payload.horarioInicioPausa = horarioInicioPausa;
+        if (horarioFimPausa) payload.horarioFimPausa = horarioFimPausa;
+
         return await this.request('/gestor/barbeiros', {
             method: 'POST',
             body: JSON.stringify(payload)
         });
     },
 
-    async atualizarBarbeiro(id, { nome, email, telefone }) {
+    async atualizarBarbeiro(id, {
+        nome,
+        email,
+        telefone,
+        horarioInicioExpediente,
+        horarioFimExpediente,
+        horarioInicioPausa,
+        horarioFimPausa
+    }) {
+        const payload = {
+            nome,
+            email,
+            telefone,
+            horarioInicioExpediente: horarioInicioExpediente || null,
+            horarioFimExpediente: horarioFimExpediente || null,
+            horarioInicioPausa: horarioInicioPausa || null,
+            horarioFimPausa: horarioFimPausa || null
+        };
         return await this.request(`/barbeiros/${encodeURIComponent(id)}`, {
             method: 'PUT',
-            body: JSON.stringify({ nome, email, telefone })
+            body: JSON.stringify(payload)
         });
     },
 
@@ -284,6 +316,13 @@ const api = {
         return await this.request(`/barbeiro/agendamentos/${encodeURIComponent(agendamentoId)}/cancelar`, {
             method: 'PATCH',
             body: JSON.stringify({ motivo })
+        });
+    },
+
+    async marcarNaoCompareceu(agendamentoId, observacao) {
+        return await this.request(`/barbeiro/agendamentos/${encodeURIComponent(agendamentoId)}/nao-compareceu`, {
+            method: 'PATCH',
+            body: JSON.stringify({ observacao: observacao || '' })
         });
     },
 

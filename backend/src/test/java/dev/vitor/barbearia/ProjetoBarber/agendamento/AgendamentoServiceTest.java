@@ -195,4 +195,82 @@ class AgendamentoServiceTest {
         assertEquals(new BigDecimal("40.00"), historico.getPercentualComissao());
         assertEquals(new BigDecimal("24.00"), historico.getValorComissao());
     }
+
+    @Test
+    @DisplayName("Deve impedir agendamento fora do expediente ou durante o intervalo de pausa/almoço do barbeiro")
+    void deveImpedirAgendamentoForaDoExpedienteOuNaPausa() {
+        barbeiro.setHorarioInicioExpediente(java.time.LocalTime.of(9, 0));
+        barbeiro.setHorarioFimExpediente(java.time.LocalTime.of(18, 0));
+        barbeiro.setHorarioInicioPausa(java.time.LocalTime.of(12, 0));
+        barbeiro.setHorarioFimPausa(java.time.LocalTime.of(13, 0));
+
+        when(clienteService.buscarPorId(1L)).thenReturn(Optional.of(cliente));
+        when(barbeiroService.buscarPorIdComLock(1L)).thenReturn(Optional.of(barbeiro));
+        when(servicoService.buscarPorId(1L)).thenReturn(Optional.of(servico));
+
+        // 1. Tentativa antes do início do expediente (08:00 quando abre às 09:00)
+        LocalDateTime antesExpediente = LocalDateTime.now().plusDays(1).withHour(8).withMinute(0);
+        AgendamentoDTO dtoFora = new AgendamentoDTO(1L, 1L, 1L, antesExpediente);
+        BusinessRuleException exFora = assertThrows(BusinessRuleException.class, () -> agendamentoService.agendar(dtoFora));
+        assertTrue(exFora.getMessage().contains("fora do expediente"));
+
+        // 2. Tentativa colidindo com a pausa de almoço (12:00 às 12:40 quando pausa é 12:00–13:00)
+        LocalDateTime durantePausa = LocalDateTime.now().plusDays(1).withHour(12).withMinute(0);
+        AgendamentoDTO dtoPausa = new AgendamentoDTO(1L, 1L, 1L, durantePausa);
+        BusinessRuleException exPausa = assertThrows(BusinessRuleException.class, () -> agendamentoService.agendar(dtoPausa));
+        assertTrue(exPausa.getMessage().contains("pausa/almoço"));
+
+        verify(agendamentoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve excluir slots do intervalo de pausa ao calcular horários disponíveis do barbeiro")
+    void deveExcluirIntervaloDePausaNosHorariosDisponiveis() {
+        barbeiro.setHorarioInicioExpediente(java.time.LocalTime.of(9, 0));
+        barbeiro.setHorarioFimExpediente(java.time.LocalTime.of(14, 0));
+        barbeiro.setHorarioInicioPausa(java.time.LocalTime.of(12, 0));
+        barbeiro.setHorarioFimPausa(java.time.LocalTime.of(13, 0));
+
+        ServicoModel servico30Min = ServicoModel.builder()
+                .id(2L).nome("Corte Rápido").duracaoMinutos(30).preco(new BigDecimal("35.00")).ativo(true).build();
+
+        when(servicoService.buscarPorId(2L)).thenReturn(Optional.of(servico30Min));
+        when(barbeiroService.buscarPorId(1L)).thenReturn(Optional.of(barbeiro));
+        when(agendamentoRepository.findByBarbeiroIdAndDataHoraBetweenAndStatus(eq(1L), any(), any(), eq(StatusAgendamento.AGENDADO)))
+                .thenReturn(java.util.List.of());
+
+        java.util.List<java.time.LocalTime> slots = agendamentoService.calcularHorariosDisponiveis(
+                1L, 2L, java.time.LocalDate.now().plusDays(2));
+
+        assertTrue(slots.contains(java.time.LocalTime.of(9, 0)));
+        assertTrue(slots.contains(java.time.LocalTime.of(11, 30)));
+        assertFalse(slots.contains(java.time.LocalTime.of(12, 0)), "Slot 12:00 deve estar bloqueado pela pausa");
+        assertFalse(slots.contains(java.time.LocalTime.of(12, 30)), "Slot 12:30 deve estar bloqueado pela pausa");
+        assertTrue(slots.contains(java.time.LocalTime.of(13, 0)));
+        assertTrue(slots.contains(java.time.LocalTime.of(13, 30)));
+    }
+
+    @Test
+    @DisplayName("Deve registrar ausência (NAO_COMPARECEU / No-Show) sem gerar histórico financeiro")
+    void deveRegistrarNaoCompareceuSemGerarHistoricoFinanceiro() {
+        AgendamentoModel agendamento = AgendamentoModel.builder()
+                .id(30L)
+                .cliente(cliente)
+                .barbeiro(barbeiro)
+                .servico(servico)
+                .dataHora(LocalDateTime.now().minusMinutes(15))
+                .status(StatusAgendamento.AGENDADO)
+                .build();
+
+        when(agendamentoRepository.findById(30L)).thenReturn(Optional.of(agendamento));
+        when(agendamentoRepository.save(any(AgendamentoModel.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        AgendamentoModel resultado = agendamentoService.marcarNaoCompareceu(
+                30L, "carlos@barber.com", false, "Cliente não apareceu após 20min de tolerância");
+
+        assertEquals(StatusAgendamento.NAO_COMPARECEU, resultado.getStatus());
+        assertTrue(resultado.getNotaAlteracao().contains("No-Show registrado pelo Barbeiro"));
+        verify(historicoRepository, never()).save(any());
+    }
 }
