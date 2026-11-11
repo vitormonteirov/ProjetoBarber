@@ -16,6 +16,7 @@ public interface BarbeiroRepository extends JpaRepository<BarbeiroModel, Long> {
     Page<BarbeiroModel> findByAtivoTrue(Pageable pageable);
     Optional<BarbeiroModel> findByIdAndAtivoTrue(Long id);
     Optional<BarbeiroModel> findByEmail(String email);
+    boolean existsByEmail(String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM BarbeiroModel b WHERE b.id = :id")

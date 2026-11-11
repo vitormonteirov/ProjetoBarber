@@ -57,6 +57,10 @@ public class BarbeiroService {
 
         validarExpedienteEPausa(inicioExp, fimExp, inicioPausa, fimPausa);
 
+        if (dto.email() != null && barbeiroRepository.existsByEmail(dto.email())) {
+            throw new BusinessRuleException("Já existe um barbeiro cadastrado com este e-mail.");
+        }
+
         BarbeiroModel barbeiro = BarbeiroModel.builder()
                 .nome(dto.nome())
                 .email(dto.email())
@@ -82,6 +86,14 @@ public class BarbeiroService {
 
             validarExpedienteEPausa(inicioExp, fimExp, dto.horarioInicioPausa(), dto.horarioFimPausa());
 
+            String emailAnterior = barbeiro.getEmail();
+            boolean trocouEmail = emailAnterior == null || !emailAnterior.equalsIgnoreCase(dto.email());
+            if (trocouEmail && dto.email() != null) {
+                if (barbeiroRepository.existsByEmail(dto.email()) || usuarioRepository.existsByEmail(dto.email())) {
+                    throw new BusinessRuleException("Este e-mail já está em uso por outro profissional ou usuário.");
+                }
+            }
+
             barbeiro.setNome(dto.nome());
             barbeiro.setEmail(dto.email());
             barbeiro.setTelefone(dto.telefone());
@@ -89,7 +101,16 @@ public class BarbeiroService {
             barbeiro.setHorarioFimExpediente(fimExp);
             barbeiro.setHorarioInicioPausa(dto.horarioInicioPausa());
             barbeiro.setHorarioFimPausa(dto.horarioFimPausa());
-            return barbeiroRepository.save(barbeiro);
+            BarbeiroModel salvo = barbeiroRepository.save(barbeiro);
+
+            if (emailAnterior != null && dto.email() != null && !emailAnterior.equalsIgnoreCase(dto.email())) {
+                usuarioRepository.findByEmail(emailAnterior).ifPresent(usuario -> {
+                    usuario.setEmail(dto.email());
+                    usuario.setNome(dto.nome());
+                    usuarioRepository.save(usuario);
+                });
+            }
+            return salvo;
         }).orElseThrow(() -> new ResourceNotFoundException("Barbeiro não encontrado com ID: " + id));
     }
 

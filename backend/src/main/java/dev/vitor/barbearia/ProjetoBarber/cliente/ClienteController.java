@@ -1,9 +1,5 @@
 package dev.vitor.barbearia.ProjetoBarber.cliente;
 
-import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoMapper;
-import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoRepository;
-import dev.vitor.barbearia.ProjetoBarber.agendamento.StatusAgendamento;
-import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,9 +20,6 @@ public class ClienteController {
 
     private final ClienteService clienteService;
     private final ClienteMapper clienteMapper;
-    private final ClienteRepository clienteRepository;
-    private final AtendimentoHistoricoRepository historicoRepository;
-    private final AgendamentoRepository agendamentoRepository;
 
     @GetMapping("/me/fidelidade")
     @PreAuthorize("hasAnyRole('CLIENTE', 'GESTOR')")
@@ -34,31 +27,7 @@ public class ClienteController {
         if (userDetails == null) {
             throw new AccessDeniedException("Usuário não autenticado.");
         }
-        ClienteModel cliente = clienteRepository.findByEmail(userDetails.getUsername()).orElse(null);
-        if (cliente == null) {
-            return ResponseEntity.ok(new FidelidadeClienteDTO(
-                    null, userDetails.getUsername(), 0L, AgendamentoMapper.META_SELOS_FIDELIDADE, 0, AgendamentoMapper.META_SELOS_FIDELIDADE, 0L, false, 0L));
-        }
-
-        int meta = AgendamentoMapper.META_SELOS_FIDELIDADE;
-        long concluidos = historicoRepository.countByClienteId(cliente.getId());
-        long faltas = agendamentoRepository.countByClienteIdAndStatus(cliente.getId(), StatusAgendamento.NAO_COMPARECEU);
-        int selosNoCiclo = (int) (concluidos % meta);
-        int faltam = selosNoCiclo == 0 && concluidos > 0 ? 0 : (meta - selosNoCiclo);
-        long recompensas = concluidos / meta;
-        boolean proximaComRecompensa = concluidos > 0 && (selosNoCiclo == (meta - 1) || selosNoCiclo == 0);
-
-        return ResponseEntity.ok(new FidelidadeClienteDTO(
-                cliente.getId(),
-                cliente.getNome(),
-                concluidos,
-                meta,
-                selosNoCiclo,
-                faltam,
-                recompensas,
-                proximaComRecompensa,
-                faltas
-        ));
+        return ResponseEntity.ok(clienteService.obterFidelidadePorEmail(userDetails.getUsername()));
     }
 
     @GetMapping
