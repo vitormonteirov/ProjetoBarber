@@ -820,6 +820,12 @@ body {
     transform: translateY(-2px);
 }
 
+.wizard-card-item:focus-visible {
+    outline: 2px solid var(--blue-accent);
+    outline-offset: 2px;
+    border-color: var(--blue-accent);
+}
+
 .wizard-card-item.selected {
     background: rgba(37, 99, 235, 0.1);
     border-color: var(--blue-accent);

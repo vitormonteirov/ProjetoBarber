@@ -840,11 +840,11 @@
     </section>
 
     <!-- MODAL CONCLUIR ATENDIMENTO (INFORMAR VALOR PAGO E FORMA DE PAGAMENTO) -->
-    <div id="modal-concluir-atendimento" class="modal-backdrop" style="display: none;">
+    <div id="modal-concluir-atendimento" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-concluir" style="display: none;">
         <div class="modal-card auth-modal-card">
             <button type="button" class="btn-close-modal" id="btn-fechar-modal-concluir" aria-label="Fechar">✕</button>
             <div class="modal-header-simple">
-                <h3>Concluir Atendimento</h3>
+                <h3 id="titulo-modal-concluir">Concluir Atendimento</h3>
                 <p id="modal-concluir-resumo">Confirme o valor pago pelo cliente para registrar no caixa.</p>
             </div>
             <form id="form-concluir-atendimento" class="form-vertical">
@@ -870,11 +870,11 @@
     </div>
 
     <!-- MODAL REAGENDAR / ALTERAR HORÁRIO DO AGENDAMENTO (BARBEIRO OU GESTOR) -->
-    <div id="modal-reagendar-atendimento" class="modal-backdrop" style="display: none;">
+    <div id="modal-reagendar-atendimento" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-reagendar" style="display: none;">
         <div class="modal-card auth-modal-card">
             <button type="button" class="btn-close-modal" id="btn-fechar-modal-reagendar" aria-label="Fechar">✕</button>
             <div class="modal-header-simple">
-                <h3>Alterar Horário do Agendamento</h3>
+                <h3 id="titulo-modal-reagendar">Alterar Horário do Agendamento</h3>
                 <p id="modal-reagendar-resumo">Defina a nova data/hora e registre o motivo da alteração.</p>
             </div>
             <form id="form-reagendar-atendimento" class="form-vertical">
@@ -901,11 +901,11 @@
     </div>
 
     <!-- MODAL DE SUCESSO / TICKET DE CONFIRMAÇÃO -->
-    <div id="modal-sucesso" class="modal-backdrop" style="display: none;">
+    <div id="modal-sucesso" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-sucesso" style="display: none;">
         <div class="modal-card ticket-card">
             <div class="ticket-header">
                 <div class="ticket-badge-check">✓</div>
-                <h3>Horário Reservado!</h3>
+                <h3 id="titulo-modal-sucesso">Horário Reservado!</h3>
                 <p>Seu agendamento foi confirmado com sucesso na Tenorio's Barber.</p>
             </div>
 
@@ -946,11 +946,11 @@
     </div>
 
     <!-- MODAL DE LOGIN / AUTENTICAÇÃO ISOLADO -->
-    <div id="modal-auth" class="modal-backdrop" style="display: none;">
+    <div id="modal-auth" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-auth" style="display: none;">
         <div class="modal-card auth-modal-card">
             <button type="button" class="btn-close-modal" id="btn-fechar-modal-auth" aria-label="Fechar">✕</button>
             <div class="modal-header-simple">
-                <h3>Acessar sua Conta</h3>
+                <h3 id="titulo-modal-auth">Acessar sua Conta</h3>
                 <p>Entre para gerenciar seus horários e ter um agendamento mais ágil.</p>
             </div>
 
@@ -971,11 +971,11 @@
     </div>
 
     <!-- MODAL MEUS AGENDAMENTOS & CARTÃO FIDELIDADE DIGITAL -->
-    <div id="modal-meus-agendamentos" class="modal-backdrop" style="display: none;">
+    <div id="modal-meus-agendamentos" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-meus-agendamentos" style="display: none;">
         <div class="modal-card modal-lg">
             <button type="button" class="btn-close-modal" id="btn-fechar-modal-meus-agendamentos" aria-label="Fechar">✕</button>
             <div class="modal-header-simple">
-                <h3>Meus Agendamentos & Fidelidade VIP</h3>
+                <h3 id="titulo-modal-meus-agendamentos">Meus Agendamentos & Fidelidade VIP</h3>
                 <p>Acompanhe seu Cartão Fidelidade Digital e gerencie suas reservas na Tenorio's Barber.</p>
             </div>
 

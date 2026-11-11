@@ -308,7 +308,12 @@ function renderizarPasso1Servicos() {
         const isSelected = idsSelecionados.has(Number(s.id));
         const checkTag = isSelected ? '<span class="servico-pill" style="float:right; background: var(--blue-accent); color: #050a14; font-weight:700;">✓ Selecionado</span>' : '';
         return `
-            <div class="wizard-card-item ${isSelected ? 'selected' : ''}" onclick="selecionarServicoWizard(${Number(s.id)})">
+            <div class="wizard-card-item ${isSelected ? 'selected' : ''}"
+                 role="checkbox"
+                 aria-checked="${isSelected}"
+                 tabindex="0"
+                 onclick="selecionarServicoWizard(${Number(s.id)})"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selecionarServicoWizard(${Number(s.id)});}">
                 <div class="item-name">${escapeHtml(s.nome)} ${checkTag}</div>
                 <div class="item-info">⏱ ${Number(s.duracaoMinutos) || 30} minutos de atendimento</div>
                 <div class="item-price">${formatadorMoeda.format(s.preco || 0)}</div>
@@ -337,7 +342,12 @@ function renderizarPasso2Barbeiros() {
     appState.barbeiros.forEach(b => {
         const isSelected = appState.selecionado.barbeiro?.id === b.id;
         html += `
-            <div class="wizard-card-item ${isSelected ? 'selected' : ''}" onclick="selecionarBarbeiroWizard(${Number(b.id)})">
+            <div class="wizard-card-item ${isSelected ? 'selected' : ''}"
+                 role="radio"
+                 aria-checked="${isSelected}"
+                 tabindex="0"
+                 onclick="selecionarBarbeiroWizard(${Number(b.id)})"
+                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selecionarBarbeiroWizard(${Number(b.id)});}">
                 <div class="item-name">${escapeHtml(b.nome)}</div>
                 <div class="item-info">Barbeiro Profissional</div>
                 <span class="barber-status-badge">● Atendendo hoje</span>
@@ -714,6 +724,18 @@ function configurarEventosUI() {
 
     // --- CONFIRMAÇÃO FINAL DO AGENDAMENTO (PASSO 4) ---
     document.getElementById('btn-confirmar-agendamento')?.addEventListener('click', submeterAgendamentoFinal);
+
+    // Acessibilidade (WCAG 2.2): Fechar modais abertos ao pressionar a tecla Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            ['modal-auth', 'modal-sucesso', 'modal-meus-agendamentos', 'modal-concluir-atendimento', 'modal-reagendar-atendimento'].forEach(id => {
+                const modal = document.getElementById(id);
+                if (modal && modal.style.display && modal.style.display !== 'none') {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    });
 }
 
 // Processa o Agendamento com o Backend Spring Boot
