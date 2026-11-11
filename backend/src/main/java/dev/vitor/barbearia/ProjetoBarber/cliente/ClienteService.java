@@ -1,6 +1,7 @@
 package dev.vitor.barbearia.ProjetoBarber.cliente;
 
 import dev.vitor.barbearia.ProjetoBarber.exceptions.ResourceNotFoundException;
+import dev.vitor.barbearia.ProjetoBarber.usuario.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +15,7 @@ import java.util.Optional;
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
+    private final UsuarioRepository usuarioRepository;
 
     @Transactional(readOnly = true)
     public Page<ClienteModel> listarAtivos(Pageable pageable) {
@@ -57,5 +59,12 @@ public class ClienteService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado com ID: " + id));
         cliente.setAtivo(false);
         clienteRepository.save(cliente);
+
+        if (cliente.getEmail() != null) {
+            usuarioRepository.findByEmail(cliente.getEmail()).ifPresent(usuario -> {
+                usuario.setAtivo(false);
+                usuarioRepository.save(usuario);
+            });
+        }
     }
 }

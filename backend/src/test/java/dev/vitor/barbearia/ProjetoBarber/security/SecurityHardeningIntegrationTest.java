@@ -9,6 +9,9 @@ import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroModel;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroService;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteModel;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteRepository;
+import dev.vitor.barbearia.ProjetoBarber.usuario.Role;
+import dev.vitor.barbearia.ProjetoBarber.usuario.UsuarioModel;
+import dev.vitor.barbearia.ProjetoBarber.usuario.UsuarioRepository;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,17 +22,32 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 class SecurityHardeningIntegrationTest {
 
     @Autowired
     private RateLimitingFilter rateLimitingFilter;
+
+    @Autowired
+    private SecurityFilter securityFilter;
+
+    @Autowired
+    private TokenService tokenService;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private AgendamentoService agendamentoService;
@@ -118,5 +136,43 @@ class SecurityHardeningIntegrationTest {
         AgendamentoModel cancelado = agendamentoService.cancelar(
                 agendamento.getId(), "dono.idor@barber.com", false);
         assertEquals(StatusAgendamento.CANCELADO, cancelado.getStatus());
+    }
+
+    @Test
+    @DisplayName("SecurityFilter deve bloquear imediatamente com HTTP 401 um token JWT válido cujo barbeiro/usuário foi desativado")
+    void securityFilterDeveBloquearImediatamenteUsuarioOuBarbeiroDesativado() throws Exception {
+        String emailBarbeiro = "barbeiro.revogado@barber.com";
+
+        BarbeiroModel barbeiro = barbeiroService.criar(
+                new BarbeiroDTO("Barbeiro Revogado", emailBarbeiro, "11955554444"));
+
+        UsuarioModel usuario = usuarioRepository.save(UsuarioModel.builder()
+                .nome("Barbeiro Revogado")
+                .email(emailBarbeiro)
+                .senha(passwordEncoder.encode("SenhaForte@123"))
+                .role(Role.ROLE_BARBEIRO)
+                .ativo(true)
+                .build());
+
+        // Emite um JWT válido enquanto o barbeiro está ativo
+        String jwtValido = tokenService.gerarToken(usuario);
+
+        // Desativa o barbeiro via BarbeiroService (que também desativa o UsuarioModel vinculado)
+        barbeiroService.excluir(barbeiro.getId());
+
+        UsuarioModel usuarioPosExclusao = usuarioRepository.findByEmail(emailBarbeiro).orElseThrow();
+        assertFalse(usuarioPosExclusao.getAtivo(), "O UsuarioModel vinculado ao barbeiro deveria ter sido desativado");
+
+        // Tenta usar o JWT emitido anteriormente em uma requisição autenticada
+        FilterChain chain = mock(FilterChain.class);
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/agendamentos/barbeiro/" + barbeiro.getId());
+        req.addHeader("Authorization", "Bearer " + jwtValido);
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        securityFilter.doFilter(req, res, chain);
+
+        assertEquals(401, res.getStatus(), "Token de usuário desativado deve ser rejeitado imediatamente com HTTP 401");
+        assertTrue(res.getContentAsString().contains("Sua conta foi desativada ou revogada"));
+        verify(chain, never()).doFilter(req, res);
     }
 }

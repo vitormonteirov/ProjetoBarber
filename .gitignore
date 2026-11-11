@@ -15,6 +15,8 @@ Thumbs.db
 *.env.*
 *.env.local
 *.env.*.local
+!.env.example
+!**/.env.example
 
 # Chaves, Certificados e Credenciais
 *.pem
