@@ -49,6 +49,7 @@ public class TokenService {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(signingKey)
+                    .requireIssuer(issuer)
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();

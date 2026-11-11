@@ -118,6 +118,57 @@ body {
     letter-spacing: -0.5px;
 }
 
+.logo-img-nav {
+    height: 48px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 2px 10px rgba(56, 189, 248, 0.25));
+    transition: var(--transition);
+}
+
+.logo:hover .logo-img-nav {
+    transform: scale(1.04);
+    filter: drop-shadow(0 4px 16px rgba(56, 189, 248, 0.45));
+}
+
+.hero-logo-showcase {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.logo-img-hero {
+    max-width: 260px;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 28px rgba(37, 99, 235, 0.45));
+    animation: floatLogo 4s ease-in-out infinite;
+}
+
+@keyframes floatLogo {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.footer-logo-link {
+    display: inline-block;
+    text-decoration: none;
+}
+
+.logo-img-footer {
+    height: 60px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 14px rgba(56, 189, 248, 0.25));
+    transition: var(--transition);
+}
+
+.footer-logo-link:hover .logo-img-footer {
+    transform: scale(1.05);
+}
+
 .logo-icon {
     display: flex;
     align-items: center;
@@ -767,6 +818,12 @@ body {
     background: var(--bg-card-hover);
     border-color: rgba(56, 189, 248, 0.4);
     transform: translateY(-2px);
+}
+
+.wizard-card-item:focus-visible {
+    outline: 2px solid var(--blue-accent);
+    outline-offset: 2px;
+    border-color: var(--blue-accent);
 }
 
 .wizard-card-item.selected {
@@ -1486,3 +1543,338 @@ body {
     font-size: 0.82rem;
     color: var(--text-dim);
 }
+
+/* ==========================================================================
+   PAINEL DINÂMICO DO GESTOR (CAIXA, HISTÓRICO IMUTÁVEL E COMISSÕES)
+   ========================================================================== */
+.gestor-period-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+}
+
+.period-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem;
+}
+
+.period-Quick-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.gestor-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.gestor-kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1.35rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.gestor-kpi-card.highlight {
+    border-color: var(--border-glow);
+    background: linear-gradient(145deg, rgba(37, 99, 235, 0.16), var(--bg-card));
+}
+
+.kpi-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.kpi-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.kpi-sub {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.text-warning {
+    color: var(--warning) !important;
+}
+
+.text-success {
+    color: var(--success) !important;
+}
+
+.gestor-two-col {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.5rem;
+}
+
+.gestor-panel-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+}
+
+.panel-card-header {
+    margin-bottom: 1.1rem;
+}
+
+.panel-card-header h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.25rem;
+}
+
+.panel-card-header p {
+    font-size: 0.86rem;
+    color: var(--text-muted);
+}
+
+.panel-header-flex {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.historico-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.gestor-list-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.barbeiro-periodo-item {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.15rem;
+}
+
+.bp-top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+}
+
+.bp-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.bp-servicos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.servico-pill {
+    display: inline-block;
+    padding: 0.22rem 0.6rem;
+    border-radius: var(--radius-full);
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--blue-accent);
+    font-size: 0.78rem;
+}
+
+.calc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+}
+
+.calc-resultado-box {
+    margin-top: 1.15rem;
+    padding: 1rem 1.15rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-sm);
+}
+
+.calc-res-grid {
+    display: grid;
+    gap: 0.45rem;
+    font-size: 0.9rem;
+}
+
+.calc-res-grid > div {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed var(--border-subtle);
+    padding-bottom: 0.3rem;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.gestor-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.gestor-table th,
+.gestor-table td {
+    padding: 0.75rem 0.85rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.gestor-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   ABAS OPERACIONAIS DO GESTOR & FORMULÁRIOS CRUD
+   ========================================================================== */
+.gestor-tabs-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+}
+
+.gestor-tab-btn {
+    flex: 1 1 auto;
+    padding: 0.75rem 1.1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+}
+
+.gestor-tab-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.gestor-tab-btn.active {
+    background: linear-gradient(135deg, var(--blue-primary), var(--blue-accent));
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+}
+
+.gestor-tab-pane {
+    display: none;
+    animation: fadeInStep 0.25s ease forwards;
+}
+
+.gestor-tab-pane.active {
+    display: block;
+}
+
+.operational-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.balcao-tipo-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.radio-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.65rem 1.1rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-main);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.radio-pill:hover {
+    border-color: var(--blue-accent);
+}
+
+.radio-pill input[type="radio"] {
+    accent-color: var(--blue-accent);
+}
+
+.crud-item-card {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.95rem 1.15rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+}
+
+.crud-item-card.inativo {
+    opacity: 0.62;
+}
+
+.crud-item-info h4 {
+    font-size: 0.98rem;
+    margin-bottom: 0.2rem;
+}
+
+.crud-item-info p {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.crud-item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+

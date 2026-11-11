@@ -27,8 +27,12 @@ public class AgendamentoController {
 
     @GetMapping
     @PreAuthorize("hasRole('GESTOR')")
-    public ResponseEntity<Page<AgendamentoResponseDTO>> listar(@PageableDefault(size = 10) Pageable pageable) {
-        Page<AgendamentoModel> agendamentos = agendamentoService.listarTodos(pageable);
+    public ResponseEntity<Page<AgendamentoResponseDTO>> listar(
+            @RequestParam(required = false) StatusAgendamento status,
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<AgendamentoModel> agendamentos = status != null
+                ? agendamentoService.listarPorStatus(status, pageable)
+                : agendamentoService.listarTodos(pageable);
         return ResponseEntity.ok(agendamentos.map(agendamentoMapper::toResponseDTO));
     }
 
@@ -45,22 +49,36 @@ public class AgendamentoController {
     public ResponseEntity<List<LocalTime>> consultarDisponibilidade(
             @RequestParam Long barbeiroId,
             @RequestParam(required = false) Long servicoId,
+            @RequestParam(required = false) List<Long> servicoIds,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
-        List<LocalTime> horarios = agendamentoService.calcularHorariosDisponiveis(barbeiroId, servicoId, data);
+        List<Long> ids = (servicoIds != null && !servicoIds.isEmpty())
+                ? servicoIds
+                : (servicoId != null ? List.of(servicoId) : List.of());
+        List<LocalTime> horarios = agendamentoService.calcularHorariosDisponiveis(barbeiroId, ids, data);
         return ResponseEntity.ok(horarios);
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('CLIENTE', 'GESTOR')")
-    public ResponseEntity<AgendamentoResponseDTO> agendar(@RequestBody @Valid AgendamentoDTO dto) {
-        AgendamentoModel model = agendamentoService.agendar(dto);
+    public ResponseEntity<AgendamentoResponseDTO> agendar(
+            @RequestBody @Valid AgendamentoDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isGestor = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_GESTOR".equals(a.getAuthority()));
+        String emailSolicitante = userDetails != null ? userDetails.getUsername() : null;
+        AgendamentoModel model = agendamentoService.agendar(dto, emailSolicitante, isGestor);
         return ResponseEntity.status(HttpStatus.CREATED).body(agendamentoMapper.toResponseDTO(model));
     }
 
     @PatchMapping("/{id}/cancelar")
     @PreAuthorize("hasAnyRole('CLIENTE', 'GESTOR')")
-    public ResponseEntity<AgendamentoResponseDTO> cancelar(@PathVariable Long id) {
-        AgendamentoModel model = agendamentoService.cancelar(id);
+    public ResponseEntity<AgendamentoResponseDTO> cancelar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isGestor = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_GESTOR".equals(a.getAuthority()));
+        String emailSolicitante = userDetails != null ? userDetails.getUsername() : null;
+        AgendamentoModel model = agendamentoService.cancelar(id, emailSolicitante, isGestor);
         return ResponseEntity.ok(agendamentoMapper.toResponseDTO(model));
     }
 }

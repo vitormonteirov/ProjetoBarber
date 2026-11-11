@@ -7,7 +7,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +20,15 @@ public class ClienteController {
 
     private final ClienteService clienteService;
     private final ClienteMapper clienteMapper;
+
+    @GetMapping("/me/fidelidade")
+    @PreAuthorize("hasAnyRole('CLIENTE', 'GESTOR')")
+    public ResponseEntity<FidelidadeClienteDTO> minhaFidelidade(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            throw new AccessDeniedException("Usuário não autenticado.");
+        }
+        return ResponseEntity.ok(clienteService.obterFidelidadePorEmail(userDetails.getUsername()));
+    }
 
     @GetMapping
     @PreAuthorize("hasRole('GESTOR')")
@@ -31,9 +43,14 @@ public class ClienteController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('GESTOR', 'CLIENTE')")
-    public ResponseEntity<ClienteResponseDTO> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<ClienteResponseDTO> buscarPorId(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
         return clienteService.buscarPorId(id)
-                .map(clienteMapper::toResponseDTO)
+                .map(cliente -> {
+                    validarTitularidadeOuGestor(cliente, userDetails);
+                    return clienteMapper.toResponseDTO(cliente);
+                })
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -47,7 +64,12 @@ public class ClienteController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('GESTOR', 'CLIENTE')")
-    public ResponseEntity<ClienteResponseDTO> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteDTO dto) {
+    public ResponseEntity<ClienteResponseDTO> atualizar(
+            @PathVariable Long id,
+            @RequestBody @Valid ClienteDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        clienteService.buscarPorId(id)
+                .ifPresent(cliente -> validarTitularidadeOuGestor(cliente, userDetails));
         ClienteModel model = clienteService.atualizar(id, dto);
         return ResponseEntity.ok(clienteMapper.toResponseDTO(model));
     }
@@ -57,5 +79,16 @@ public class ClienteController {
     public ResponseEntity<Void> excluir(@PathVariable Long id) {
         clienteService.excluir(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private void validarTitularidadeOuGestor(ClienteModel cliente, UserDetails userDetails) {
+        if (userDetails == null) {
+            throw new AccessDeniedException("Usuário não autenticado.");
+        }
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_GESTOR".equals(a.getAuthority()));
+        if (!isGestor && (cliente.getEmail() == null || !cliente.getEmail().equalsIgnoreCase(userDetails.getUsername()))) {
+            throw new AccessDeniedException("Acesso negado: você só pode consultar ou alterar os seus próprios dados cadastrais.");
+        }
     }
 }

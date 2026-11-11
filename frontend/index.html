@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Tenorio's Barber - Agendamento online de cortes e tratamentos com os melhores mestres das lâminas. Rápido, intuitivo e exclusivo.">
-    <title>Tenorio's Barber | Estilo, Precisão & Agendamento Online</title>
+    <title>Tenório's Barbearia | Estilo, Precisão & Agendamento Online</title>
+    <link rel="icon" type="image/png" href="assets/img/logo-tenorios.png">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,9 +19,8 @@
     <!-- NAVBAR -->
     <header class="navbar" id="top">
         <div class="container navbar-inner">
-            <a href="#" class="logo">
-                <span class="logo-icon">✂</span>
-                <span class="logo-text">TENORIO'S <span>BARBER</span></span>
+            <a href="#" class="logo" aria-label="Tenório's Barbearia - Início">
+                <img src="assets/img/logo-tenorios.png" alt="Logo Tenório's Barbearia" class="logo-img-nav">
             </a>
 
             <nav class="nav-menu">
@@ -30,6 +30,12 @@
                     <li><a href="#agendamento" class="nav-highlight">Agendar Online</a></li>
                     <li id="nav-meus-agendamentos-item" style="display: none;">
                         <a href="#meus-agendamentos" id="btn-abrir-meus-agendamentos">Meus Agendamentos</a>
+                    </li>
+                    <li id="nav-barbeiro-agenda-item" style="display: none;">
+                        <a href="#gestor-dashboard" id="btn-abrir-agenda-barbeiro" class="nav-highlight">Minha Agenda</a>
+                    </li>
+                    <li id="nav-gestor-dashboard-item" style="display: none;">
+                        <a href="#gestor-dashboard" id="btn-abrir-gestor-dashboard" class="nav-highlight">Painel do Gestor</a>
                     </li>
                 </ul>
             </nav>
@@ -65,8 +71,11 @@
     <section class="hero">
         <div class="hero-bg-glow"></div>
         <div class="container hero-content">
+            <div class="hero-logo-showcase">
+                <img src="assets/img/logo-tenorios.png" alt="Tenório's Barbearia" class="logo-img-hero">
+            </div>
             <div class="hero-tag">
-                <span class="sparkle">✦</span> Tradição & Tecnologia • Tenorio's Barber
+                <span class="sparkle">✦</span> Tradição & Tecnologia • Tenório's Barbearia
             </div>
             <h1 class="hero-title">
                 Eleve o seu visual.<br>
@@ -178,11 +187,11 @@
                 <!-- CONTAINER DAS ETAPAS DO WIZARD -->
                 <div class="wizard-container">
 
-                    <!-- PASSO 1: ESCOLHA DO SERVIÇO -->
+                    <!-- PASSO 1: ESCOLHA DO SERVIÇO (MÚLTIPLOS SERVIÇOS PERMITIDOS) -->
                     <div class="wizard-step-pane active" id="wizard-pane-1">
                         <div class="step-heading">
-                            <h3>1. Qual serviço você deseja realizar hoje?</h3>
-                            <p>Clique em uma das opções abaixo para selecionar:</p>
+                            <h3>1. Quais serviços você deseja realizar hoje?</h3>
+                            <p>Selecione <strong>um ou mais serviços</strong> (corte + barba + sobrancelha) — o sistema soma o tempo e o valor automaticamente:</p>
                         </div>
                         <div id="wizard-servicos-list" class="wizard-options-grid">
                             <!-- Injetado dinamicamente -->
@@ -381,12 +390,522 @@
         </div>
     </section>
 
+    <!-- PAINEL DINÂMICO DO GESTOR & GESTÃO OPERACIONAL -->
+    <section id="gestor-dashboard" class="section section-darker" style="display: none;">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-kicker" id="painel-kicker">Gestão Financeira & Operacional</span>
+                <h2 class="section-title" id="painel-titulo">Central Operacional do <span>Gestor</span></h2>
+                <p class="section-subtitle" id="painel-subtitulo">
+                    Caixa do período, histórico permanente, comissões, gestão de barbeiros, serviços e reservas de balcão.
+                </p>
+            </div>
+
+            <!-- BARRA DE ABAS OPERACIONAIS -->
+            <div class="gestor-tabs-nav" id="gestor-tabs-nav">
+                <button type="button" class="gestor-tab-btn active" data-tab="financeiro" id="tab-btn-financeiro">
+                    📊 Caixa, Comissões & Histórico
+                </button>
+                <button type="button" class="gestor-tab-btn" data-tab="agenda" id="tab-btn-agenda">
+                    📅 Agenda, Baixa & Reagendamento
+                </button>
+                <button type="button" class="gestor-tab-btn" data-tab="balcao" id="tab-btn-balcao">
+                    ⚡ Reserva Rápida (Cliente / Não-Usuário)
+                </button>
+                <button type="button" class="gestor-tab-btn" data-tab="barbeiros" id="tab-btn-barbeiros">
+                    💈 Equipe de Barbeiros
+                </button>
+                <button type="button" class="gestor-tab-btn" data-tab="servicos" id="tab-btn-servicos">
+                    ✂️ Catálogo de Serviços
+                </button>
+            </div>
+
+            <!-- =========================================================
+                 ABA 1: CAIXA, COMISSÕES & HISTÓRICO IMUTÁVEL (EXCLUSIVO GESTOR)
+                 ========================================================= -->
+            <div id="gestor-only-container" class="gestor-tab-pane active" data-pane="financeiro">
+                <!-- Barra de Período -->
+                <div class="gestor-period-bar">
+                    <div class="period-inputs">
+                        <div class="form-group">
+                            <label for="gestor-data-inicio">Data Inicial</label>
+                            <input type="date" id="gestor-data-inicio" class="custom-date-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="gestor-data-fim">Data Final</label>
+                            <input type="date" id="gestor-data-fim" class="custom-date-input">
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btn-aplicar-periodo">
+                            Atualizar Período
+                        </button>
+                        <button type="button" class="btn btn-outline-sm" id="btn-exportar-csv" title="Exportar histórico do período em formato CSV compatível com Excel">
+                            ⬇ Exportar CSV
+                        </button>
+                    </div>
+                    <div class="period-Quick-presets">
+                        <button type="button" class="chip-date" data-preset="hoje">Hoje</button>
+                        <button type="button" class="chip-date" data-preset="7dias">Últimos 7 dias</button>
+                        <button type="button" class="chip-date active" data-preset="mes">Este Mês</button>
+                        <button type="button" class="chip-date" data-preset="tudo">Todo o Histórico</button>
+                    </div>
+                </div>
+
+                <!-- KPIs de Caixa e Atendimentos -->
+                <div class="gestor-kpi-grid">
+                    <div class="gestor-kpi-card highlight">
+                        <span class="kpi-label">Caixa Total no Período</span>
+                        <strong class="kpi-value" id="kpi-caixa-total">R$ 0,00</strong>
+                        <small class="kpi-sub" id="kpi-ticket-medio">Ticket médio: R$ 0,00</small>
+                    </div>
+                    <div class="gestor-kpi-card">
+                        <span class="kpi-label">Atendimentos Realizados</span>
+                        <strong class="kpi-value" id="kpi-atendimentos-realizados">0</strong>
+                        <small class="kpi-sub" id="kpi-pendentes-cancelados">0 agendados • 0 cancelados</small>
+                    </div>
+                    <div class="gestor-kpi-card">
+                        <span class="kpi-label">Comissões dos Barbeiros</span>
+                        <strong class="kpi-value text-warning" id="kpi-comissao-total">R$ 0,00</strong>
+                        <small class="kpi-sub">Total destinado aos profissionais</small>
+                    </div>
+                    <div class="gestor-kpi-card">
+                        <span class="kpi-label">Lucro Líquido da Barbearia</span>
+                        <strong class="kpi-value text-success" id="kpi-lucro-liquido">R$ 0,00</strong>
+                        <small class="kpi-sub">Caixa menos comissões</small>
+                    </div>
+                </div>
+
+                <!-- Resumo por Barbeiro + Serviços Oferecidos & Calculadora de Comissão -->
+                <div class="gestor-two-col">
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3>Desempenho por Barbeiro no Período</h3>
+                            <p>Quantidade de atendimentos, serviços realizados e caixa gerado por profissional.</p>
+                        </div>
+                        <div id="gestor-barbeiros-resumo" class="gestor-list-stack">
+                            <p class="slots-empty-state">Nenhum atendimento concluído no período selecionado.</p>
+                        </div>
+                    </div>
+
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3>Calculadora & Ajuste de Comissão</h3>
+                            <p>Analise os atendimentos de um barbeiro e insira qualquer porcentagem (%) para calcular ou salvar a comissão.</p>
+                        </div>
+                        <div class="comissao-calc-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="calc-select-barbeiro">Barbeiro</label>
+                                    <select id="calc-select-barbeiro" class="custom-date-input">
+                                        <option value="">Selecione um barbeiro...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="calc-input-percentual">Porcentagem do Barbeiro (%)</label>
+                                    <input type="number" id="calc-input-percentual" min="0" max="100" step="0.5" placeholder="Ex: 50">
+                                </div>
+                            </div>
+                            <div class="calc-actions">
+                                <button type="button" class="btn btn-primary" id="btn-simular-comissao">
+                                    Calcular Comissão no Período
+                                </button>
+                                <button type="button" class="btn btn-outline-sm" id="btn-salvar-comissao-fixa" title="Salva este percentual como padrão para os próximos atendimentos deste barbeiro">
+                                    Salvar % Fixo no Cadastro
+                                </button>
+                            </div>
+                        </div>
+                        <div id="calc-resultado-box" class="calc-resultado-box" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Histórico Imutável de Atendimentos / Serviços -->
+                <div class="gestor-panel-card" style="margin-top: 1.5rem;">
+                    <div class="panel-card-header panel-header-flex">
+                        <div>
+                            <h3>Histórico Permanente de Atendimentos & Serviços</h3>
+                            <p>Registro imutável: permanece preservado mesmo que um barbeiro ou serviço seja desativado ou removido posteriormente.</p>
+                        </div>
+                        <div class="historico-filters">
+                            <select id="filtro-historico-barbeiro" class="custom-date-input">
+                                <option value="">Todos os barbeiros</option>
+                            </select>
+                            <select id="filtro-historico-servico" class="custom-date-input">
+                                <option value="">Todos os serviços</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="gestor-table">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Cliente</th>
+                                    <th>Barbeiro</th>
+                                    <th>Serviço Oferecido</th>
+                                    <th>Pagamento</th>
+                                    <th>Valor Pago</th>
+                                    <th>Comissão (%)</th>
+                                    <th>Valor Comissão</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-historico-body">
+                                <tr><td colspan="8" class="slots-empty-state">Carregando histórico...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 ABA 2: AGENDA OPERACIONAL — DAR BAIXA, REAGENDAR, WHATSAPP & BLOQUEIOS DE FOLGA (BARBEIRO & GESTOR)
+                 ========================================================= -->
+            <div class="gestor-tab-pane" data-pane="agenda" id="pane-operacional-agenda">
+                <div class="gestor-panel-card">
+                    <div class="panel-card-header panel-header-flex">
+                        <div>
+                            <h3>Controle de Agenda — Concluir, Lembrete WhatsApp, Alterar Horário ou Cancelar</h3>
+                            <p>Gerencie os compromissos ativos: envie lembrete via WhatsApp, dê baixa no pagamento, registre faltas (No-Show) ou reagende.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline-sm" id="btn-recarregar-fila">↻ Atualizar Agenda</button>
+                    </div>
+                    <div id="lista-fila-conclusao" class="my-appointments-list">
+                        <p class="slots-empty-state">Nenhum agendamento pendente encontrado.</p>
+                    </div>
+                </div>
+
+                <!-- BLOQUEIO PONTUAL DE AGENDA / FOLGAS E AUSÊNCIAS -->
+                <div class="gestor-two-col" style="margin-top: 1.5rem;">
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3>🔒 Bloquear Horário / Folga Pontual</h3>
+                            <p>Feche um intervalo específico na agenda (ex: consulta médica, feriado, folga ou saída antecipada).</p>
+                        </div>
+                        <form id="form-bloqueio-agenda" class="operational-form">
+                            <div class="form-group" id="group-bloqueio-barbeiro" style="display: none;">
+                                <label for="bloqueio-select-barbeiro">Barbeiro *</label>
+                                <select id="bloqueio-select-barbeiro" class="custom-date-input w-full">
+                                    <option value="">Selecione o barbeiro...</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="bloqueio-data-inicio">Início do Bloqueio *</label>
+                                    <input type="datetime-local" id="bloqueio-data-inicio" class="custom-date-input w-full" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="bloqueio-data-fim">Fim do Bloqueio *</label>
+                                    <input type="datetime-local" id="bloqueio-data-fim" class="custom-date-input w-full" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="bloqueio-motivo">Motivo / Observação *</label>
+                                <input type="text" id="bloqueio-motivo" placeholder="Ex: Consulta médica / Folga à tarde" required>
+                            </div>
+                            <div class="calc-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    🔒 Registrar Bloqueio na Agenda
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header panel-header-flex">
+                            <div>
+                                <h3>Bloqueios e Folgas Cadastrados</h3>
+                                <p>Intervalos bloqueados não aparecem como horários disponíveis para os clientes.</p>
+                            </div>
+                        </div>
+                        <div id="lista-bloqueios-agenda" class="gestor-list-stack">
+                            <p class="slots-empty-state">Nenhum bloqueio pontual registrado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 ABA 3: RESERVA RÁPIDA DE BALCÃO / WHATSAPP (CLIENTE CADASTRADO OU NÃO-USUÁRIO)
+                 ========================================================= -->
+            <div class="gestor-tab-pane" data-pane="balcao" id="pane-operacional-balcao">
+                <div class="gestor-panel-card">
+                    <div class="panel-card-header">
+                        <h3>Reserva Rápida pelo Gestor (Cliente Cadastrado ou Não-Usuário)</h3>
+                        <p>Reserve horários para qualquer cliente cadastrado ou registre um atendimento avulso para quem não possui conta no sistema.</p>
+                    </div>
+
+                    <form id="form-gestor-agendamento-balcao" class="operational-form">
+                        <div class="balcao-tipo-toggle">
+                            <label class="radio-pill">
+                                <input type="radio" name="balcao-tipo-cliente" value="nao-usuario" checked>
+                                <span>👤 Não-Usuário (Avulso / Balcão / WhatsApp)</span>
+                            </label>
+                            <label class="radio-pill">
+                                <input type="radio" name="balcao-tipo-cliente" value="cadastrado">
+                                <span>🪪 Cliente já Cadastrado</span>
+                            </label>
+                        </div>
+
+                        <!-- Campos para Não-Usuário -->
+                        <div id="box-balcao-nao-usuario" class="form-row">
+                            <div class="form-group">
+                                <label for="balcao-nome-avulso">Nome do Cliente (Não-Usuário) *</label>
+                                <input type="text" id="balcao-nome-avulso" placeholder="Ex: Roberto Almeida (WhatsApp)">
+                            </div>
+                            <div class="form-group">
+                                <label for="balcao-telefone-avulso">Telefone / WhatsApp</label>
+                                <input type="tel" id="balcao-telefone-avulso" placeholder="(11) 98888-7777">
+                            </div>
+                        </div>
+
+                        <!-- Campo para Cliente Cadastrado -->
+                        <div id="box-balcao-cadastrado" class="form-row" style="display: none;">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="balcao-select-cliente">Selecionar Cliente Cadastrado *</label>
+                                <select id="balcao-select-cliente" class="custom-date-input w-full">
+                                    <option value="">Selecione um cliente...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="balcao-select-barbeiro">Barbeiro *</label>
+                                <select id="balcao-select-barbeiro" class="custom-date-input w-full" required>
+                                    <option value="">Selecione o barbeiro...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="balcao-select-servico">Serviço *</label>
+                                <select id="balcao-select-servico" class="custom-date-input w-full" required>
+                                    <option value="">Selecione o serviço...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="balcao-data">Data do Atendimento *</label>
+                                <input type="date" id="balcao-data" class="custom-date-input w-full" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="balcao-hora">Horário Livre *</label>
+                                <select id="balcao-hora" class="custom-date-input w-full" required>
+                                    <option value="">Escolha barbeiro e data primeiro...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="calc-actions">
+                            <button type="submit" class="btn btn-primary">
+                                ✓ Confirmar Reserva no Sistema
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 ABA 4: GESTÃO DE BARBEIROS (EXCLUSIVO GESTOR)
+                 ========================================================= -->
+            <div class="gestor-tab-pane" data-pane="barbeiros" id="pane-operacional-barbeiros">
+                <div class="gestor-two-col">
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3 id="titulo-form-barbeiro">Cadastrar Novo Barbeiro</h3>
+                            <p id="subtitulo-form-barbeiro">A role BARBEIRO é atribuída única e exclusivamente pelo Gestor.</p>
+                        </div>
+                        <form id="form-gestor-barbeiro" class="operational-form">
+                            <input type="hidden" id="gestor-barbeiro-id">
+                            <div class="form-group">
+                                <label for="gestor-barbeiro-nome">Nome Completo *</label>
+                                <input type="text" id="gestor-barbeiro-nome" placeholder="Ex: Rafael Navalha" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-email">E-mail de Acesso *</label>
+                                    <input type="email" id="gestor-barbeiro-email" placeholder="barbeiro@tenoriosbarber.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-telefone">Telefone (10 a 15 dígitos) *</label>
+                                    <input type="tel" id="gestor-barbeiro-telefone" placeholder="11988887777" required>
+                                </div>
+                            </div>
+                            <div class="form-row" id="row-barbeiro-credenciais">
+                                <div class="form-group" id="group-barbeiro-senha">
+                                    <label for="gestor-barbeiro-senha">Senha Inicial (mín. 6 caracteres) *</label>
+                                    <input type="password" id="gestor-barbeiro-senha" placeholder="••••••••" minlength="6">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-comissao">Comissão Padrão (%)</label>
+                                    <input type="number" id="gestor-barbeiro-comissao" min="0" max="100" step="0.5" value="50">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-exp-inicio">Início Expediente *</label>
+                                    <input type="time" id="gestor-barbeiro-exp-inicio" class="custom-date-input w-full" value="08:00" step="1800" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-exp-fim">Fim Expediente *</label>
+                                    <input type="time" id="gestor-barbeiro-exp-fim" class="custom-date-input w-full" value="19:00" step="1800" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-pausa-inicio">Início Pausa/Almoço (padrão 12:00)</label>
+                                    <input type="time" id="gestor-barbeiro-pausa-inicio" class="custom-date-input w-full" value="12:00" step="1800">
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-barbeiro-pausa-fim">Fim Pausa/Almoço (padrão 13:00)</label>
+                                    <input type="time" id="gestor-barbeiro-pausa-fim" class="custom-date-input w-full" value="13:00" step="1800">
+                                </div>
+                            </div>
+                            <div class="calc-actions">
+                                <button type="submit" class="btn btn-primary" id="btn-salvar-barbeiro">
+                                    Salvar Barbeiro
+                                </button>
+                                <button type="button" class="btn btn-ghost" id="btn-cancelar-edicao-barbeiro" style="display: none;">
+                                    Cancelar Edição
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header panel-header-flex">
+                            <div>
+                                <h3>Profissionais Cadastrados</h3>
+                                <p>Edite dados cadastrais, ajuste a comissão ou desative profissionais.</p>
+                            </div>
+                        </div>
+                        <div id="lista-gestor-barbeiros-crud" class="gestor-list-stack">
+                            <p class="slots-empty-state">Carregando barbeiros...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========================================================
+                 ABA 5: CATÁLOGO DE SERVIÇOS (EXCLUSIVO GESTOR)
+                 ========================================================= -->
+            <div class="gestor-tab-pane" data-pane="servicos" id="pane-operacional-servicos">
+                <div class="gestor-two-col">
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3 id="titulo-form-servico">Incluir Novo Serviço</h3>
+                            <p>Adicione ou edite serviços, preços e durações oferecidos na barbearia.</p>
+                        </div>
+                        <form id="form-gestor-servico" class="operational-form">
+                            <input type="hidden" id="gestor-servico-id">
+                            <div class="form-group">
+                                <label for="gestor-servico-nome">Nome do Serviço *</label>
+                                <input type="text" id="gestor-servico-nome" placeholder="Ex: Corte Degradê & Sobrancelha" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gestor-servico-preco">Preço (R$) *</label>
+                                    <input type="number" id="gestor-servico-preco" min="1" step="0.50" placeholder="55.00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gestor-servico-duracao">Duração (minutos) *</label>
+                                    <input type="number" id="gestor-servico-duracao" min="5" step="5" value="30" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="gestor-servico-descricao">Descrição para a Vitrine</label>
+                                <input type="text" id="gestor-servico-descricao" placeholder="Acabamento na navalha, lavagem e finalização...">
+                            </div>
+                            <div class="calc-actions">
+                                <button type="submit" class="btn btn-primary" id="btn-salvar-servico">
+                                    Salvar Serviço
+                                </button>
+                                <button type="button" class="btn btn-ghost" id="btn-cancelar-edicao-servico" style="display: none;">
+                                    Cancelar Edição
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3>Serviços do Catálogo</h3>
+                            <p>Serviços desativados saem da vitrine pública, mas permanecem preservados no histórico financeiro.</p>
+                        </div>
+                        <div id="lista-gestor-servicos-crud" class="gestor-list-stack">
+                            <p class="slots-empty-state">Carregando serviços...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MODAL CONCLUIR ATENDIMENTO (INFORMAR VALOR PAGO E FORMA DE PAGAMENTO) -->
+    <div id="modal-concluir-atendimento" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-concluir" style="display: none;">
+        <div class="modal-card auth-modal-card">
+            <button type="button" class="btn-close-modal" id="btn-fechar-modal-concluir" aria-label="Fechar">✕</button>
+            <div class="modal-header-simple">
+                <h3 id="titulo-modal-concluir">Concluir Atendimento</h3>
+                <p id="modal-concluir-resumo">Confirme o valor pago pelo cliente para registrar no caixa.</p>
+            </div>
+            <form id="form-concluir-atendimento" class="form-vertical">
+                <input type="hidden" id="concluir-agendamento-id">
+                <div class="form-group">
+                    <label for="concluir-valor-pago">Valor Pago (R$)</label>
+                    <input type="number" id="concluir-valor-pago" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="concluir-forma-pagamento">Forma de Pagamento</label>
+                    <select id="concluir-forma-pagamento" class="custom-date-input" required>
+                        <option value="PIX">PIX</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="CARTAO_DEBITO">Cartão de Débito</option>
+                        <option value="CARTAO_CREDITO">Cartão de Crédito</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-full">
+                    Confirmar Recebimento & Concluir
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL REAGENDAR / ALTERAR HORÁRIO DO AGENDAMENTO (BARBEIRO OU GESTOR) -->
+    <div id="modal-reagendar-atendimento" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-reagendar" style="display: none;">
+        <div class="modal-card auth-modal-card">
+            <button type="button" class="btn-close-modal" id="btn-fechar-modal-reagendar" aria-label="Fechar">✕</button>
+            <div class="modal-header-simple">
+                <h3 id="titulo-modal-reagendar">Alterar Horário do Agendamento</h3>
+                <p id="modal-reagendar-resumo">Defina a nova data/hora e registre o motivo da alteração.</p>
+            </div>
+            <form id="form-reagendar-atendimento" class="form-vertical">
+                <input type="hidden" id="reagendar-agendamento-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reagendar-nova-data">Nova Data *</label>
+                        <input type="date" id="reagendar-nova-data" class="custom-date-input w-full" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reagendar-nova-hora">Novo Horário *</label>
+                        <input type="time" id="reagendar-nova-hora" class="custom-date-input w-full" step="1800" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reagendar-nota">Justificativa / Nota de Alteração *</label>
+                    <input type="text" id="reagendar-nota" placeholder="Ex: Solicitação do cliente via WhatsApp" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-full">
+                    Confirmar Novo Horário
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL DE SUCESSO / TICKET DE CONFIRMAÇÃO -->
-    <div id="modal-sucesso" class="modal-backdrop" style="display: none;">
+    <div id="modal-sucesso" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-sucesso" style="display: none;">
         <div class="modal-card ticket-card">
             <div class="ticket-header">
                 <div class="ticket-badge-check">✓</div>
-                <h3>Horário Reservado!</h3>
+                <h3 id="titulo-modal-sucesso">Horário Reservado!</h3>
                 <p>Seu agendamento foi confirmado com sucesso na Tenorio's Barber.</p>
             </div>
 
@@ -427,11 +946,11 @@
     </div>
 
     <!-- MODAL DE LOGIN / AUTENTICAÇÃO ISOLADO -->
-    <div id="modal-auth" class="modal-backdrop" style="display: none;">
+    <div id="modal-auth" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-auth" style="display: none;">
         <div class="modal-card auth-modal-card">
             <button type="button" class="btn-close-modal" id="btn-fechar-modal-auth" aria-label="Fechar">✕</button>
             <div class="modal-header-simple">
-                <h3>Acessar sua Conta</h3>
+                <h3 id="titulo-modal-auth">Acessar sua Conta</h3>
                 <p>Entre para gerenciar seus horários e ter um agendamento mais ágil.</p>
             </div>
 
@@ -451,14 +970,17 @@
         </div>
     </div>
 
-    <!-- MODAL MEUS AGENDAMENTOS -->
-    <div id="modal-meus-agendamentos" class="modal-backdrop" style="display: none;">
+    <!-- MODAL MEUS AGENDAMENTOS & CARTÃO FIDELIDADE DIGITAL -->
+    <div id="modal-meus-agendamentos" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-meus-agendamentos" style="display: none;">
         <div class="modal-card modal-lg">
             <button type="button" class="btn-close-modal" id="btn-fechar-modal-meus-agendamentos" aria-label="Fechar">✕</button>
             <div class="modal-header-simple">
-                <h3>Meus Agendamentos</h3>
-                <p>Histórico e reservas ativas na Tenorio's Barber.</p>
+                <h3 id="titulo-modal-meus-agendamentos">Meus Agendamentos & Fidelidade VIP</h3>
+                <p>Acompanhe seu Cartão Fidelidade Digital e gerencie suas reservas na Tenorio's Barber.</p>
             </div>
+
+            <!-- CARTÃO FIDELIDADE DIGITAL -->
+            <div id="fidelidade-cliente-card" style="margin-bottom: 1.2rem;"></div>
 
             <div id="lista-meus-agendamentos" class="my-appointments-list">
                 <!-- Preenchido via JS -->
@@ -474,11 +996,13 @@
     <footer class="footer">
         <div class="container footer-inner">
             <div class="footer-brand">
-                <span class="logo">✂ TENORIO'S <span>BARBER</span></span>
+                <a href="#top" class="footer-logo-link">
+                    <img src="assets/img/logo-tenorios.png" alt="Logo Tenório's Barbearia" class="logo-img-footer">
+                </a>
                 <p>Excelência e cuidado com o seu estilo pessoal. Sistema moderno de agendamentos integrado com arquitetura Spring Boot REST.</p>
             </div>
             <div class="footer-bottom">
-                <p>© 2026 Tenorio's Barber. Todos os direitos reservados.</p>
+                <p>© 2026 Tenório's Barbearia. Todos os direitos reservados.</p>
             </div>
         </div>
     </footer>

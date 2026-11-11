@@ -6,14 +6,18 @@ import dev.vitor.barbearia.ProjetoBarber.servico.ServicoModel;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "agendamento")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -33,6 +37,15 @@ public class AgendamentoModel {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "servico_id")
     private ServicoModel servico;
+
+    @Builder.Default
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "agendamento_servico",
+            joinColumns = @JoinColumn(name = "agendamento_id"),
+            inverseJoinColumns = @JoinColumn(name = "servico_id")
+    )
+    private List<ServicoModel> servicos = new ArrayList<>();
 
     @Column(name = "data_hora", nullable = false)
     private LocalDateTime dataHora;
@@ -55,4 +68,12 @@ public class AgendamentoModel {
 
     @Column(name = "telefone_nao_usuario", length = 50)
     private String telefoneNaoUsuario;
+
+    /** Nomes concatenados dos serviços quando o cliente seleciona múltiplos serviços no carrinho. */
+    @Column(name = "descricao_servicos", length = 500)
+    private String descricaoServicos;
+
+    /** Duração total combinada (em minutos) dos serviços selecionados no agendamento. */
+    @Column(name = "duracao_total_minutos")
+    private Integer duracaoTotalMinutos;
 }

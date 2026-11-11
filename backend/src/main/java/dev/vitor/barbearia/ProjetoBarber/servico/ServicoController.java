@@ -8,6 +8,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,8 +23,12 @@ public class ServicoController {
     @GetMapping
     public ResponseEntity<Page<ServicoResponseDTO>> listar(
             @RequestParam(defaultValue = "true") boolean apenasAtivos,
-            @PageableDefault(size = 10) Pageable pageable) {
-        Page<ServicoModel> servicos = apenasAtivos
+            @PageableDefault(size = 10) Pageable pageable,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isGestor = userDetails != null && userDetails.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_GESTOR".equals(a.getAuthority()));
+        boolean filtrarAtivos = apenasAtivos || !isGestor;
+        Page<ServicoModel> servicos = filtrarAtivos
                 ? servicoService.listarAtivos(pageable)
                 : servicoService.listarTodos(pageable);
         return ResponseEntity.ok(servicos.map(servicoMapper::toResponseDTO));

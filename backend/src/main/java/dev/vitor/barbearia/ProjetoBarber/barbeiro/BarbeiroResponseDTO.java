@@ -1,7 +1,40 @@
 package dev.vitor.barbearia.ProjetoBarber.barbeiro;
 
-public record BarbeiroResponseDTO(Long id, String nome, String email, String telefone, Boolean ativo) {
+import java.math.BigDecimal;
+import java.time.LocalTime;
+
+public record BarbeiroResponseDTO(
+        Long id,
+        String nome,
+        String email,
+        String telefone,
+        Boolean ativo,
+        BigDecimal percentualComissao,
+        LocalTime horarioInicioExpediente,
+        LocalTime horarioFimExpediente,
+        LocalTime horarioInicioPausa,
+        LocalTime horarioFimPausa
+) {
+    public BarbeiroResponseDTO(Long id, String nome, String email, String telefone, Boolean ativo, BigDecimal percentualComissao) {
+        this(
+                id,
+                nome,
+                email,
+                telefone,
+                ativo,
+                percentualComissao,
+                BarbeiroModel.EXPEDIENTE_INICIO_PADRAO,
+                BarbeiroModel.EXPEDIENTE_FIM_PADRAO,
+                BarbeiroModel.PAUSA_INICIO_PADRAO,
+                BarbeiroModel.PAUSA_FIM_PADRAO
+        );
+    }
+
+    public BarbeiroResponseDTO(Long id, String nome, String email, String telefone, Boolean ativo) {
+        this(id, nome, email, telefone, ativo, BarbeiroModel.PERCENTUAL_COMISSAO_PADRAO);
+    }
+
     public BarbeiroResponseDTO(Long id, String nome, String email, String telefone) {
-        this(id, nome, email, telefone, true);
+        this(id, nome, email, telefone, true, BarbeiroModel.PERCENTUAL_COMISSAO_PADRAO);
     }
 }

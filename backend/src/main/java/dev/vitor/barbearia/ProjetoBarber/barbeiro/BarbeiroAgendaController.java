@@ -4,6 +4,9 @@ import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoMapper;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoModel;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoResponseDTO;
 import dev.vitor.barbearia.ProjetoBarber.agendamento.AgendamentoService;
+import dev.vitor.barbearia.ProjetoBarber.agendamento.ConcluirAtendimentoDTO;
+import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoModel;
+import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoResponseDTO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +25,7 @@ public class BarbeiroAgendaController {
 
     private final AgendamentoService agendamentoService;
     private final AgendamentoMapper agendamentoMapper;
+    private final BloqueioAgendaService bloqueioAgendaService;
 
     @GetMapping("/minha-agenda")
     @PreAuthorize("hasRole('BARBEIRO')")
@@ -58,5 +62,70 @@ public class BarbeiroAgendaController {
         AgendamentoModel cancelado = agendamentoService.cancelarPeloBarbeiroOuGestor(
                 id, userDetails.getUsername(), isGestor, dto);
         return ResponseEntity.ok(agendamentoMapper.toResponseDTO(cancelado));
+    }
+
+    @PatchMapping("/agendamentos/{id}/concluir")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
+    public ResponseEntity<AtendimentoHistoricoResponseDTO> concluirAtendimento(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody @Valid ConcluirAtendimentoDTO dto) {
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+
+        AtendimentoHistoricoModel historico = agendamentoService.concluirAtendimento(
+                id, userDetails.getUsername(), isGestor, dto);
+        return ResponseEntity.ok(AtendimentoHistoricoResponseDTO.from(historico));
+    }
+
+    @PatchMapping("/agendamentos/{id}/nao-compareceu")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
+    public ResponseEntity<AgendamentoResponseDTO> marcarNaoCompareceu(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody(required = false) @Valid NaoCompareceuDTO dto) {
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+
+        String observacao = dto != null ? dto.observacao() : null;
+        AgendamentoModel model = agendamentoService.marcarNaoCompareceu(
+                id, userDetails.getUsername(), isGestor, observacao);
+        return ResponseEntity.ok(agendamentoMapper.toResponseDTO(model));
+    }
+
+    @GetMapping("/bloqueios")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
+    public ResponseEntity<java.util.List<BloqueioAgendaResponseDTO>> listarBloqueios(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+        return ResponseEntity.ok(
+                bloqueioAgendaService.listarBloqueiosAtivos(userDetails.getUsername(), isGestor)
+                        .stream()
+                        .map(BloqueioAgendaResponseDTO::from)
+                        .toList());
+    }
+
+    @PostMapping("/bloqueios")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
+    public ResponseEntity<BloqueioAgendaResponseDTO> criarBloqueio(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody @Valid BloqueioAgendaDTO dto) {
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+        BloqueioAgendaModel salvo = bloqueioAgendaService.criarBloqueio(dto, userDetails.getUsername(), isGestor);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(BloqueioAgendaResponseDTO.from(salvo));
+    }
+
+    @DeleteMapping("/bloqueios/{id}")
+    @PreAuthorize("hasAnyRole('BARBEIRO', 'GESTOR')")
+    public ResponseEntity<Void> removerBloqueio(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        boolean isGestor = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_GESTOR"));
+        bloqueioAgendaService.removerBloqueio(id, userDetails.getUsername(), isGestor);
+        return ResponseEntity.noContent().build();
     }
 }

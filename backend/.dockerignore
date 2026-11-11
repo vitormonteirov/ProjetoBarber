@@ -1,0 +1,9 @@
+target/
+!target/*.jar
+.env
+.env.*
+*.log
+.git/
+.idea/
+.vscode/
+HELP.md

@@ -1,8 +1,19 @@
 /**
  * Camada de Integração HTTP com a API Spring Boot (ProjetoBarber)
- * Backend URL: http://localhost:8080/api
+ * Em desenvolvimento local (Live Server / file://) aponta para http://localhost:8080/api;
+ * em produção (VPS / Docker com Nginx proxy) utiliza '/api' na mesma origem.
  */
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = (() => {
+    const { protocol, hostname, port } = window.location;
+    if (protocol === 'file:') {
+        return 'http://localhost:8080/api';
+    }
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (isLocalHost && port && port !== '80' && port !== '443') {
+        return 'http://localhost:8080/api';
+    }
+    return '/api';
+})();
 
 const api = {
     // --- GERENCIAMENTO DE SESSÃO / JWT ---
@@ -52,6 +63,9 @@ const api = {
         const response = await fetch(url, { ...options, headers });
 
         if (!response.ok) {
+            if (response.status === 401 && !endpoint.startsWith('/auth/')) {
+                this.logout();
+            }
             let errorMsg = `Erro na requisição (${response.status})`;
             try {
                 const errJson = await response.json();
@@ -93,30 +107,58 @@ const api = {
         return data;
     },
 
+    async renovarSessao() {
+        const data = await this.request('/auth/refresh', {
+            method: 'POST'
+        });
+        this.setSession(data);
+        return data;
+    },
+
+    async alterarSenha(senhaAtual, novaSenha) {
+        return await this.request('/auth/alterar-senha', {
+            method: 'PATCH',
+            body: JSON.stringify({ senhaAtual, novaSenha })
+        });
+    },
+
     // --- BARBEIROS (Público) ---
     async listarBarbeiros(apenasAtivos = true, size = 50) {
-        const data = await this.request(`/barbeiros?apenasAtivos=${apenasAtivos}&size=${size}`);
+        const params = new URLSearchParams({
+            apenasAtivos: String(Boolean(apenasAtivos)),
+            size: String(Math.min(100, Number(size) || 50))
+        });
+        const data = await this.request(`/barbeiros?${params.toString()}`);
         return data?.content || [];
     },
 
     async buscarBarbeiroPorId(id) {
-        return await this.request(`/barbeiros/${id}`);
+        return await this.request(`/barbeiros/${encodeURIComponent(id)}`);
     },
 
     // --- SERVIÇOS (Público) ---
     async listarServicos(apenasAtivos = true, size = 50) {
-        const data = await this.request(`/servicos?apenasAtivos=${apenasAtivos}&size=${size}`);
+        const params = new URLSearchParams({
+            apenasAtivos: String(Boolean(apenasAtivos)),
+            size: String(Math.min(100, Number(size) || 50))
+        });
+        const data = await this.request(`/servicos?${params.toString()}`);
         return data?.content || [];
     },
 
     // --- DISPONIBILIDADE DE HORÁRIOS (Público) ---
     // Retorna array de LocalTime string: ["08:00:00", "08:30:00", ...]
-    async consultarDisponibilidade(barbeiroId, servicoId, dataIso) {
-        let endpoint = `/agendamentos/disponibilidade?barbeiroId=${barbeiroId}&data=${dataIso}`;
-        if (servicoId) {
-            endpoint += `&servicoId=${servicoId}`;
+    async consultarDisponibilidade(barbeiroId, servicoIdsOrId, dataIso) {
+        const params = new URLSearchParams({
+            barbeiroId: String(barbeiroId),
+            data: String(dataIso)
+        });
+        if (Array.isArray(servicoIdsOrId) && servicoIdsOrId.length > 0) {
+            servicoIdsOrId.forEach(id => params.append('servicoIds', String(id)));
+        } else if (servicoIdsOrId) {
+            params.set('servicoId', String(servicoIdsOrId));
         }
-        return await this.request(endpoint);
+        return await this.request(`/agendamentos/disponibilidade?${params.toString()}`);
     },
 
     // --- AGENDAMENTOS (Requer autenticação CLIENTE ou GESTOR) ---
@@ -136,6 +178,207 @@ const api = {
         return await this.request(`/agendamentos/${id}/cancelar`, {
             method: 'PATCH'
         });
+    },
+
+    // --- BARBEIRO / GESTOR: CONCLUSÃO E AGENDA ---
+    async minhaAgendaBarbeiro(page = 0, size = 30) {
+        const data = await this.request(`/barbeiro/minha-agenda?page=${page}&size=${size}`);
+        return data?.content || [];
+    },
+
+    async listarAgendamentosGestor(status = 'AGENDADO', page = 0, size = 30) {
+        const q = status ? `status=${status}&` : '';
+        const data = await this.request(`/agendamentos?${q}page=${page}&size=${size}`);
+        return data?.content || [];
+    },
+
+    async concluirAtendimento(agendamentoId, valorPago, formaPagamento) {
+        const payload = { formaPagamento };
+        if (valorPago !== null && valorPago !== undefined && valorPago !== '') {
+            payload.valorPago = Number(valorPago);
+        }
+        return await this.request(`/barbeiro/agendamentos/${agendamentoId}/concluir`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    // --- GESTOR: RELATÓRIO DINÂMICO, CAIXA, HISTÓRICO E COMISSÕES ---
+    async obterRelatorioPeriodo(dataInicio, dataFim) {
+        const params = new URLSearchParams();
+        if (dataInicio) params.set('dataInicio', dataInicio);
+        if (dataFim) params.set('dataFim', dataFim);
+        return await this.request(`/gestor/relatorio?${params.toString()}`);
+    },
+
+    async listarHistoricoAtendimentos({ dataInicio, dataFim, barbeiroId, servicoId, page = 0, size = 50 } = {}) {
+        const params = new URLSearchParams({ page: String(page), size: String(size) });
+        if (dataInicio) params.set('dataInicio', dataInicio);
+        if (dataFim) params.set('dataFim', dataFim);
+        if (barbeiroId) params.set('barbeiroId', String(barbeiroId));
+        if (servicoId) params.set('servicoId', String(servicoId));
+        return await this.request(`/gestor/historico?${params.toString()}`);
+    },
+
+    async calcularComissaoBarbeiro(barbeiroId, { dataInicio, dataFim, percentual } = {}) {
+        const params = new URLSearchParams();
+        if (dataInicio) params.set('dataInicio', dataInicio);
+        if (dataFim) params.set('dataFim', dataFim);
+        if (percentual !== null && percentual !== undefined && percentual !== '') {
+            params.set('percentual', String(percentual));
+        }
+        return await this.request(`/gestor/comissoes/${barbeiroId}?${params.toString()}`);
+    },
+
+    async atualizarPercentualComissaoBarbeiro(barbeiroId, percentualComissao) {
+        return await this.request(`/gestor/barbeiros/${encodeURIComponent(barbeiroId)}/comissao`, {
+            method: 'PATCH',
+            body: JSON.stringify({ percentualComissao: Number(percentualComissao) })
+        });
+    },
+
+    // --- GESTÃO OPERACIONAL: BARBEIROS, SERVIÇOS, CLIENTES E REAGENDAMENTO ---
+    async cadastrarBarbeiroComAcesso({
+        nome,
+        email,
+        senha,
+        telefone,
+        percentualComissao,
+        horarioInicioExpediente,
+        horarioFimExpediente,
+        horarioInicioPausa,
+        horarioFimPausa
+    }) {
+        const payload = { nome, email, senha, telefone };
+        if (percentualComissao !== null && percentualComissao !== undefined && percentualComissao !== '') {
+            payload.percentualComissao = Number(percentualComissao);
+        }
+        if (horarioInicioExpediente) payload.horarioInicioExpediente = horarioInicioExpediente;
+        if (horarioFimExpediente) payload.horarioFimExpediente = horarioFimExpediente;
+        if (horarioInicioPausa) payload.horarioInicioPausa = horarioInicioPausa;
+        if (horarioFimPausa) payload.horarioFimPausa = horarioFimPausa;
+
+        return await this.request('/gestor/barbeiros', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async atualizarBarbeiro(id, {
+        nome,
+        email,
+        telefone,
+        horarioInicioExpediente,
+        horarioFimExpediente,
+        horarioInicioPausa,
+        horarioFimPausa
+    }) {
+        const payload = {
+            nome,
+            email,
+            telefone,
+            horarioInicioExpediente: horarioInicioExpediente || null,
+            horarioFimExpediente: horarioFimExpediente || null,
+            horarioInicioPausa: horarioInicioPausa || null,
+            horarioFimPausa: horarioFimPausa || null
+        };
+        return await this.request(`/barbeiros/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async desativarBarbeiro(id) {
+        return await this.request(`/barbeiros/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+    },
+
+    async criarServico({ nome, descricao, preco, duracaoMinutos }) {
+        return await this.request('/servicos', {
+            method: 'POST',
+            body: JSON.stringify({
+                nome,
+                descricao: descricao || '',
+                preco: Number(preco),
+                duracaoMinutos: Number(duracaoMinutos)
+            })
+        });
+    },
+
+    async atualizarServico(id, { nome, descricao, preco, duracaoMinutos }) {
+        return await this.request(`/servicos/${encodeURIComponent(id)}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                nome,
+                descricao: descricao || '',
+                preco: Number(preco),
+                duracaoMinutos: Number(duracaoMinutos)
+            })
+        });
+    },
+
+    async desativarServico(id) {
+        return await this.request(`/servicos/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+    },
+
+    async listarClientesGestor(apenasAtivos = true, size = 100) {
+        const params = new URLSearchParams({
+            apenasAtivos: String(Boolean(apenasAtivos)),
+            size: String(Math.min(100, Number(size) || 100))
+        });
+        const data = await this.request(`/clientes?${params.toString()}`);
+        return data?.content || [];
+    },
+
+    async alterarHorarioAgendamento(agendamentoId, novaDataHora, notaAlteracao) {
+        return await this.request(`/barbeiro/agendamentos/${encodeURIComponent(agendamentoId)}/alterar-horario`, {
+            method: 'PATCH',
+            body: JSON.stringify({ novaDataHora, notaAlteracao })
+        });
+    },
+
+    async cancelarAgendamentoOperacional(agendamentoId, motivo) {
+        return await this.request(`/barbeiro/agendamentos/${encodeURIComponent(agendamentoId)}/cancelar`, {
+            method: 'PATCH',
+            body: JSON.stringify({ motivo })
+        });
+    },
+
+    async marcarNaoCompareceu(agendamentoId, observacao) {
+        return await this.request(`/barbeiro/agendamentos/${encodeURIComponent(agendamentoId)}/nao-compareceu`, {
+            method: 'PATCH',
+            body: JSON.stringify({ observacao: observacao || '' })
+        });
+    },
+
+    // --- BLOQUEIOS DE AGENDA / FOLGAS (BARBEIRO & GESTOR) ---
+    async listarBloqueiosAgenda() {
+        return await this.request('/barbeiro/bloqueios');
+    },
+
+    async criarBloqueioAgenda({ barbeiroId, dataHoraInicio, dataHoraFim, motivo }) {
+        const payload = { dataHoraInicio, dataHoraFim, motivo };
+        if (barbeiroId) {
+            payload.barbeiroId = Number(barbeiroId);
+        }
+        return await this.request('/barbeiro/bloqueios', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async removerBloqueioAgenda(id) {
+        return await this.request(`/barbeiro/bloqueios/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+    },
+
+    // --- PROGRAMA DE FIDELIDADE DO CLIENTE ---
+    async obterMinhaFidelidade() {
+        return await this.request('/clientes/me/fidelidade');
     },
 
     // Verificação de saúde da API

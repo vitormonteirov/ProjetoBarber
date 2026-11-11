@@ -58,4 +58,26 @@ public class AuthService {
 
         return new LoginResponseDTO(token, usuario.getId(), usuario.getNome(), usuario.getEmail(), usuario.getRole());
     }
+
+    @Transactional(readOnly = true)
+    public LoginResponseDTO renovarSessao(String email) {
+        UsuarioModel usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new dev.vitor.barbearia.ProjetoBarber.exceptions.ResourceNotFoundException("Usuário não encontrado."));
+        if (Boolean.FALSE.equals(usuario.getAtivo())) {
+            throw new org.springframework.security.access.AccessDeniedException("Sua conta está desativada.");
+        }
+        String novoToken = tokenService.gerarToken(usuario);
+        return new LoginResponseDTO(novoToken, usuario.getId(), usuario.getNome(), usuario.getEmail(), usuario.getRole());
+    }
+
+    @Transactional
+    public void alterarSenha(String email, AlterarSenhaDTO dto) {
+        UsuarioModel usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new dev.vitor.barbearia.ProjetoBarber.exceptions.ResourceNotFoundException("Usuário não encontrado."));
+        if (!passwordEncoder.matches(dto.senhaAtual(), usuario.getSenha())) {
+            throw new BusinessRuleException("A senha atual informada está incorreta.");
+        }
+        usuario.setSenha(passwordEncoder.encode(dto.novaSenha()));
+        usuarioRepository.save(usuario);
+    }
 }

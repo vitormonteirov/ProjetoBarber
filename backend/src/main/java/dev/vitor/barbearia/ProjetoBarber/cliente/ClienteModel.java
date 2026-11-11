@@ -8,7 +8,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "cliente")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,15 +19,16 @@ public class ClienteModel {
     private Long id;
     private String nome;
     private String telefone;
+
+    @Column(unique = true)
     private String email;
 
     @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
 
-    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "cliente")
     @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     @JsonIgnore
     private List<AgendamentoModel> agendamentos;
 }

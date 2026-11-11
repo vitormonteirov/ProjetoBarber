@@ -13,24 +13,29 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenApiConfig {
 
+    private static final String SECURITY_SCHEME_NAME = "bearerAuth";
+
     @Bean
     public OpenAPI customOpenAPI() {
-        final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
                 .info(new Info()
-                        .title("Tenório's Barber API")
-                        .description("API REST moderna para agendamento de barbearia com arquitetura escalável, eventos de domínio e controle de concorrência.")
+                        .title("Tenorio's Barber — API de Gestão & Agendamentos")
                         .version("v1.0.0")
-                        .contact(new Contact().name("Equipe Tenório's Barber").email("suporte@tenoriosbarber.com"))
-                        .license(new License().name("MIT").url("https://opensource.org/licenses/MIT")))
-                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+                        .description("API RESTful de gestão operacional e financeira de barbearia: agendamentos com prevenção de conflitos (Lock Pessimista), "
+                                + "RBAC (Cliente, Barbeiro, Gestor), caixa por período, histórico imutável de atendimentos, cálculo de comissões e proteção Rate Limiting.")
+                        .contact(new Contact()
+                                .name("Tenorio's Barber Dev Team")
+                                .email("gestor@tenoriosbarber.com"))
+                        .license(new License()
+                                .name("Proprietary / Internal Use")))
+                .addSecurityItem(new SecurityRequirement().addList(SECURITY_SCHEME_NAME))
                 .components(new Components()
-                        .addSecuritySchemes(securitySchemeName,
+                        .addSecuritySchemes(SECURITY_SCHEME_NAME,
                                 new SecurityScheme()
-                                        .name(securitySchemeName)
+                                        .name(SECURITY_SCHEME_NAME)
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("Insira o token JWT gerado no endpoint /api/auth/login")));
+                                        .description("Insira o token JWT retornado em /api/auth/login ou /api/auth/registrar")));
     }
 }
