@@ -30,7 +30,7 @@ ProjetoBarber/
 ## 🚀 Como Executar o Projeto
 
 ### 1. Back-end (API Spring Boot)
-1. Certifique-se de ter o **Java 21** e o **MySQL** em execução.
+1. Certifique-se de ter o **Java 21** instalado (em perfil `dev` utiliza H2 em memória no modo PostgreSQL; em `prod` utiliza **PostgreSQL 16**).
 2. Navegue até a pasta do backend:
    ```bash
    cd backend
@@ -42,7 +42,14 @@ ProjetoBarber/
    *(Ou no Windows via PowerShell: `.\mvnw.cmd spring-boot:run` ou pela sua IDE como IntelliJ).*
 4. A API estará disponível em: `http://localhost:8080/api`
 
-### 2. Front-end
+### 2. Front-end (Desenvolvimento Local)
 1. Você não precisa compilar nada: basta abrir o arquivo `frontend/index.html` em qualquer navegador.
 2. **Recomendado:** Abra com a extensão **Live Server** do VS Code (ou qualquer servidor estático local).
 3. A página detectará automaticamente se o backend está ligado na porta `8080` e exibirá o indicador verde de conexão!
+
+### 3. Deploy em Produção (VPS / Docker Compose)
+1. Copie `.env.example` para `.env` na raiz do projeto e configure `DB_PASSWORD`, `JWT_SECRET`, `GESTOR_SENHA` e `CORS_ALLOWED_ORIGINS`.
+2. Suba toda a stack (PostgreSQL 16 + Backend Java 21 + Frontend Nginx com Proxy Reverso):
+   ```bash
+   docker compose up -d --build
+   ```
