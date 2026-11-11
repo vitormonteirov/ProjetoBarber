@@ -47,7 +47,15 @@ public class BarbeiroService {
         LocalTime fimExp = dto.horarioFimExpediente() != null
                 ? dto.horarioFimExpediente()
                 : BarbeiroModel.EXPEDIENTE_FIM_PADRAO;
-        validarExpedienteEPausa(inicioExp, fimExp, dto.horarioInicioPausa(), dto.horarioFimPausa());
+
+        LocalTime inicioPausa = dto.horarioInicioPausa();
+        LocalTime fimPausa = dto.horarioFimPausa();
+        if (inicioPausa == null && fimPausa == null) {
+            inicioPausa = BarbeiroModel.PAUSA_INICIO_PADRAO;
+            fimPausa = BarbeiroModel.PAUSA_FIM_PADRAO;
+        }
+
+        validarExpedienteEPausa(inicioExp, fimExp, inicioPausa, fimPausa);
 
         BarbeiroModel barbeiro = BarbeiroModel.builder()
                 .nome(dto.nome())
@@ -56,8 +64,8 @@ public class BarbeiroService {
                 .ativo(true)
                 .horarioInicioExpediente(inicioExp)
                 .horarioFimExpediente(fimExp)
-                .horarioInicioPausa(dto.horarioInicioPausa())
-                .horarioFimPausa(dto.horarioFimPausa())
+                .horarioInicioPausa(inicioPausa)
+                .horarioFimPausa(fimPausa)
                 .build();
         return barbeiroRepository.save(barbeiro);
     }

@@ -197,12 +197,14 @@ class AgendamentoServiceTest {
     }
 
     @Test
-    @DisplayName("Deve impedir agendamento fora do expediente ou durante o intervalo de pausa/almoço do barbeiro")
+    @DisplayName("Deve aplicar pausa padrão de 12:00 às 13:00 e impedir agendamento fora do expediente ou na pausa")
     void deveImpedirAgendamentoForaDoExpedienteOuNaPausa() {
+        // Verifica que o barbeiro recém-instanciado já possui pausa padrão de 12:00 às 13:00
+        assertEquals(java.time.LocalTime.of(12, 0), barbeiro.getHorarioInicioPausa());
+        assertEquals(java.time.LocalTime.of(13, 0), barbeiro.getHorarioFimPausa());
+
         barbeiro.setHorarioInicioExpediente(java.time.LocalTime.of(9, 0));
         barbeiro.setHorarioFimExpediente(java.time.LocalTime.of(18, 0));
-        barbeiro.setHorarioInicioPausa(java.time.LocalTime.of(12, 0));
-        barbeiro.setHorarioFimPausa(java.time.LocalTime.of(13, 0));
 
         when(clienteService.buscarPorId(1L)).thenReturn(Optional.of(cliente));
         when(barbeiroService.buscarPorIdComLock(1L)).thenReturn(Optional.of(barbeiro));
@@ -214,11 +216,20 @@ class AgendamentoServiceTest {
         BusinessRuleException exFora = assertThrows(BusinessRuleException.class, () -> agendamentoService.agendar(dtoFora));
         assertTrue(exFora.getMessage().contains("fora do expediente"));
 
-        // 2. Tentativa colidindo com a pausa de almoço (12:00 às 12:40 quando pausa é 12:00–13:00)
-        LocalDateTime durantePausa = LocalDateTime.now().plusDays(1).withHour(12).withMinute(0);
-        AgendamentoDTO dtoPausa = new AgendamentoDTO(1L, 1L, 1L, durantePausa);
+        // 2. Tentativa colidindo com a pausa padrão de almoço (12:00 às 12:40 quando pausa padrão é 12:00–13:00)
+        LocalDateTime durantePausaPadrao = LocalDateTime.now().plusDays(1).withHour(12).withMinute(0);
+        AgendamentoDTO dtoPausa = new AgendamentoDTO(1L, 1L, 1L, durantePausaPadrao);
         BusinessRuleException exPausa = assertThrows(BusinessRuleException.class, () -> agendamentoService.agendar(dtoPausa));
         assertTrue(exPausa.getMessage().contains("pausa/almoço"));
+
+        // 3. Gestor altera a pausa do barbeiro para 13:00 às 14:00 -> o horário de 12:00 passa a ser permitido e 13:00 bloqueado
+        barbeiro.setHorarioInicioPausa(java.time.LocalTime.of(13, 0));
+        barbeiro.setHorarioFimPausa(java.time.LocalTime.of(14, 0));
+
+        LocalDateTime duranteNovaPausa = LocalDateTime.now().plusDays(1).withHour(13).withMinute(0);
+        AgendamentoDTO dtoNovaPausa = new AgendamentoDTO(1L, 1L, 1L, duranteNovaPausa);
+        BusinessRuleException exNovaPausa = assertThrows(BusinessRuleException.class, () -> agendamentoService.agendar(dtoNovaPausa));
+        assertTrue(exNovaPausa.getMessage().contains("13:00 às 14:00"));
 
         verify(agendamentoRepository, never()).save(any());
     }

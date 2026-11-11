@@ -25,8 +25,8 @@ public record BarbeiroResponseDTO(
                 percentualComissao,
                 BarbeiroModel.EXPEDIENTE_INICIO_PADRAO,
                 BarbeiroModel.EXPEDIENTE_FIM_PADRAO,
-                null,
-                null
+                BarbeiroModel.PAUSA_INICIO_PADRAO,
+                BarbeiroModel.PAUSA_FIM_PADRAO
         );
     }
 

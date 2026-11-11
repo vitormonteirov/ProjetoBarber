@@ -389,7 +389,7 @@ async function carregarSlotsDisponiveis() {
     }
 }
 
-// Gera slots de demonstração se a API estiver offline
+// Gera slots de demonstração se a API estiver offline (respeitando pausa padrão das 12:00 às 13:00)
 function gerarSlotsMock(dataIso) {
     const lista = [];
     const agora = new Date();
@@ -397,6 +397,7 @@ function gerarSlotsMock(dataIso) {
     const isHoje = dataEscolhida.toDateString() === agora.toDateString();
 
     for (let h = 8; h <= 18; h++) {
+        if (h === 12) continue; // Pausa de almoço padrão: 12:00 às 13:00
         for (let m of [0, 30]) {
             const horaStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
             if (isHoje) {
@@ -1333,11 +1334,11 @@ function renderizarListaBarbeirosCrud() {
         const pct = b.percentualComissao ?? 50;
         const expIni = formatarHoraCurta(b.horarioInicioExpediente, '08:00');
         const expFim = formatarHoraCurta(b.horarioFimExpediente, '19:00');
-        const pausaIni = formatarHoraCurta(b.horarioInicioPausa);
-        const pausaFim = formatarHoraCurta(b.horarioFimPausa);
-        const textoPausa = (pausaIni && pausaFim)
-            ? ` • ☕ Pausa: ${escapeHtml(pausaIni)}–${escapeHtml(pausaFim)}`
-            : ' • Sem pausa fixa';
+        const pausaIni = formatarHoraCurta(b.horarioInicioPausa, '12:00');
+        const pausaFim = formatarHoraCurta(b.horarioFimPausa, '13:00');
+        const textoPausa = (b.horarioInicioPausa === null && b.horarioFimPausa === null)
+            ? ' • Sem pausa fixa'
+            : ` • ☕ Pausa: ${escapeHtml(pausaIni)} às ${escapeHtml(pausaFim)}`;
 
         return `
             <div class="crud-item-card ${ativo ? '' : 'inativo'}">
@@ -1368,8 +1369,8 @@ window.prepararEdicaoBarbeiro = function(id) {
     document.getElementById('gestor-barbeiro-comissao').value = b.percentualComissao ?? 50;
     document.getElementById('gestor-barbeiro-exp-inicio').value = formatarHoraCurta(b.horarioInicioExpediente, '08:00');
     document.getElementById('gestor-barbeiro-exp-fim').value = formatarHoraCurta(b.horarioFimExpediente, '19:00');
-    document.getElementById('gestor-barbeiro-pausa-inicio').value = formatarHoraCurta(b.horarioInicioPausa, '');
-    document.getElementById('gestor-barbeiro-pausa-fim').value = formatarHoraCurta(b.horarioFimPausa, '');
+    document.getElementById('gestor-barbeiro-pausa-inicio').value = formatarHoraCurta(b.horarioInicioPausa, '12:00');
+    document.getElementById('gestor-barbeiro-pausa-fim').value = formatarHoraCurta(b.horarioFimPausa, '13:00');
     document.getElementById('gestor-barbeiro-senha').value = '';
     document.getElementById('group-barbeiro-senha').style.display = 'none';
     document.getElementById('titulo-form-barbeiro').textContent = `Editar Barbeiro #${b.id}`;
@@ -1382,8 +1383,8 @@ function resetarFormBarbeiro() {
     document.getElementById('gestor-barbeiro-comissao').value = '50';
     document.getElementById('gestor-barbeiro-exp-inicio').value = '08:00';
     document.getElementById('gestor-barbeiro-exp-fim').value = '19:00';
-    document.getElementById('gestor-barbeiro-pausa-inicio').value = '';
-    document.getElementById('gestor-barbeiro-pausa-fim').value = '';
+    document.getElementById('gestor-barbeiro-pausa-inicio').value = '12:00';
+    document.getElementById('gestor-barbeiro-pausa-fim').value = '13:00';
     document.getElementById('group-barbeiro-senha').style.display = 'block';
     document.getElementById('titulo-form-barbeiro').textContent = 'Cadastrar Novo Barbeiro';
     document.getElementById('btn-cancelar-edicao-barbeiro').style.display = 'none';

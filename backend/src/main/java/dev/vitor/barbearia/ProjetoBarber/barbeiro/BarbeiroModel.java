@@ -41,13 +41,15 @@ public class BarbeiroModel {
     @Column(name = "horario_fim_expediente", nullable = false)
     private LocalTime horarioFimExpediente = EXPEDIENTE_FIM_PADRAO;
 
-    /** Início opcional do intervalo de pausa/almoço (ex.: 12:00). */
+    /** Início do intervalo de pausa/almoço (padrão 12:00, configurável pelo Gestor). */
+    @Builder.Default
     @Column(name = "horario_inicio_pausa")
-    private LocalTime horarioInicioPausa;
+    private LocalTime horarioInicioPausa = PAUSA_INICIO_PADRAO;
 
-    /** Fim opcional do intervalo de pausa/almoço (ex.: 13:00). */
+    /** Fim do intervalo de pausa/almoço (padrão 13:00, configurável pelo Gestor). */
+    @Builder.Default
     @Column(name = "horario_fim_pausa")
-    private LocalTime horarioFimPausa;
+    private LocalTime horarioFimPausa = PAUSA_FIM_PADRAO;
 
     @OneToMany(mappedBy = "barbeiro", cascade = CascadeType.ALL)
     @ToString.Exclude
@@ -58,6 +60,8 @@ public class BarbeiroModel {
     public static final BigDecimal PERCENTUAL_COMISSAO_PADRAO = new BigDecimal("50.00");
     public static final LocalTime EXPEDIENTE_INICIO_PADRAO = LocalTime.of(8, 0);
     public static final LocalTime EXPEDIENTE_FIM_PADRAO = LocalTime.of(19, 0);
+    public static final LocalTime PAUSA_INICIO_PADRAO = LocalTime.of(12, 0);
+    public static final LocalTime PAUSA_FIM_PADRAO = LocalTime.of(13, 0);
 
     @PrePersist
     void aplicarPadroes() {
@@ -65,5 +69,9 @@ public class BarbeiroModel {
         if (percentualComissao == null) percentualComissao = PERCENTUAL_COMISSAO_PADRAO;
         if (horarioInicioExpediente == null) horarioInicioExpediente = EXPEDIENTE_INICIO_PADRAO;
         if (horarioFimExpediente == null) horarioFimExpediente = EXPEDIENTE_FIM_PADRAO;
+        if (horarioInicioPausa == null && horarioFimPausa == null) {
+            horarioInicioPausa = PAUSA_INICIO_PADRAO;
+            horarioFimPausa = PAUSA_FIM_PADRAO;
+        }
     }
 }
