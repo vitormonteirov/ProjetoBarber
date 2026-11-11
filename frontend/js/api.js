@@ -138,6 +138,63 @@ const api = {
         });
     },
 
+    // --- BARBEIRO / GESTOR: CONCLUSÃO E AGENDA ---
+    async minhaAgendaBarbeiro(page = 0, size = 30) {
+        const data = await this.request(`/barbeiro/minha-agenda?page=${page}&size=${size}`);
+        return data?.content || [];
+    },
+
+    async listarAgendamentosGestor(status = 'AGENDADO', page = 0, size = 30) {
+        const q = status ? `status=${status}&` : '';
+        const data = await this.request(`/agendamentos?${q}page=${page}&size=${size}`);
+        return data?.content || [];
+    },
+
+    async concluirAtendimento(agendamentoId, valorPago, formaPagamento) {
+        const payload = { formaPagamento };
+        if (valorPago !== null && valorPago !== undefined && valorPago !== '') {
+            payload.valorPago = Number(valorPago);
+        }
+        return await this.request(`/barbeiro/agendamentos/${agendamentoId}/concluir`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    // --- GESTOR: RELATÓRIO DINÂMICO, CAIXA, HISTÓRICO E COMISSÕES ---
+    async obterRelatorioPeriodo(dataInicio, dataFim) {
+        const params = new URLSearchParams();
+        if (dataInicio) params.set('dataInicio', dataInicio);
+        if (dataFim) params.set('dataFim', dataFim);
+        return await this.request(`/gestor/relatorio?${params.toString()}`);
+    },
+
+    async listarHistoricoAtendimentos({ dataInicio, dataFim, barbeiroId, servicoId, page = 0, size = 50 } = {}) {
+        const params = new URLSearchParams({ page: String(page), size: String(size) });
+        if (dataInicio) params.set('dataInicio', dataInicio);
+        if (dataFim) params.set('dataFim', dataFim);
+        if (barbeiroId) params.set('barbeiroId', String(barbeiroId));
+        if (servicoId) params.set('servicoId', String(servicoId));
+        return await this.request(`/gestor/historico?${params.toString()}`);
+    },
+
+    async calcularComissaoBarbeiro(barbeiroId, { dataInicio, dataFim, percentual } = {}) {
+        const params = new URLSearchParams();
+        if (dataInicio) params.set('dataInicio', dataInicio);
+        if (dataFim) params.set('dataFim', dataFim);
+        if (percentual !== null && percentual !== undefined && percentual !== '') {
+            params.set('percentual', String(percentual));
+        }
+        return await this.request(`/gestor/comissoes/${barbeiroId}?${params.toString()}`);
+    },
+
+    async atualizarPercentualComissaoBarbeiro(barbeiroId, percentualComissao) {
+        return await this.request(`/gestor/barbeiros/${barbeiroId}/comissao`, {
+            method: 'PATCH',
+            body: JSON.stringify({ percentualComissao: Number(percentualComissao) })
+        });
+    },
+
     // Verificação de saúde da API
     async verificarConexao() {
         try {

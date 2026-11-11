@@ -31,6 +31,12 @@
                     <li id="nav-meus-agendamentos-item" style="display: none;">
                         <a href="#meus-agendamentos" id="btn-abrir-meus-agendamentos">Meus Agendamentos</a>
                     </li>
+                    <li id="nav-barbeiro-agenda-item" style="display: none;">
+                        <a href="#gestor-dashboard" id="btn-abrir-agenda-barbeiro" class="nav-highlight">Minha Agenda</a>
+                    </li>
+                    <li id="nav-gestor-dashboard-item" style="display: none;">
+                        <a href="#gestor-dashboard" id="btn-abrir-gestor-dashboard" class="nav-highlight">Painel do Gestor</a>
+                    </li>
                 </ul>
             </nav>
 
@@ -380,6 +386,193 @@
             </div>
         </div>
     </section>
+
+    <!-- PAINEL DINÂMICO DO GESTOR & AGENDA DE CONCLUSÃO -->
+    <section id="gestor-dashboard" class="section section-darker" style="display: none;">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-kicker" id="painel-kicker">Gestão Financeira & Operacional</span>
+                <h2 class="section-title" id="painel-titulo">Painel Dinâmico do <span>Gestor</span></h2>
+                <p class="section-subtitle" id="painel-subtitulo">
+                    Caixa do período, histórico imutável de atendimentos e cálculo/simulação de comissões por barbeiro.
+                </p>
+            </div>
+
+            <!-- BLOCO EXCLUSIVO DO GESTOR: FILTRO DE PERÍODO + MÉTRICAS + COMISSÃO + HISTÓRICO -->
+            <div id="gestor-only-container">
+                <!-- Barra de Período -->
+                <div class="gestor-period-bar">
+                    <div class="period-inputs">
+                        <div class="form-group">
+                            <label for="gestor-data-inicio">Data Inicial</label>
+                            <input type="date" id="gestor-data-inicio" class="custom-date-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="gestor-data-fim">Data Final</label>
+                            <input type="date" id="gestor-data-fim" class="custom-date-input">
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btn-aplicar-periodo">
+                            Atualizar Período
+                        </button>
+                    </div>
+                    <div class="period-Quick-presets">
+                        <button type="button" class="chip-date" data-preset="hoje">Hoje</button>
+                        <button type="button" class="chip-date" data-preset="7dias">Últimos 7 dias</button>
+                        <button type="button" class="chip-date active" data-preset="mes">Este Mês</button>
+                        <button type="button" class="chip-date" data-preset="tudo">Todo o Histórico</button>
+                    </div>
+                </div>
+
+                <!-- KPIs de Caixa e Atendimentos -->
+                <div class="gestor-kpi-grid">
+                    <div class="gestor-kpi-card highlight">
+                        <span class="kpi-label">Caixa Total no Período</span>
+                        <strong class="kpi-value" id="kpi-caixa-total">R$ 0,00</strong>
+                        <small class="kpi-sub" id="kpi-ticket-medio">Ticket médio: R$ 0,00</small>
+                    </div>
+                    <div class="gestor-kpi-card">
+                        <span class="kpi-label">Atendimentos Realizados</span>
+                        <strong class="kpi-value" id="kpi-atendimentos-realizados">0</strong>
+                        <small class="kpi-sub" id="kpi-pendentes-cancelados">0 agendados • 0 cancelados</small>
+                    </div>
+                    <div class="gestor-kpi-card">
+                        <span class="kpi-label">Comissões dos Barbeiros</span>
+                        <strong class="kpi-value text-warning" id="kpi-comissao-total">R$ 0,00</strong>
+                        <small class="kpi-sub">Total destinado aos profissionais</small>
+                    </div>
+                    <div class="gestor-kpi-card">
+                        <span class="kpi-label">Lucro Líquido da Barbearia</span>
+                        <strong class="kpi-value text-success" id="kpi-lucro-liquido">R$ 0,00</strong>
+                        <small class="kpi-sub">Caixa menos comissões</small>
+                    </div>
+                </div>
+
+                <!-- Resumo por Barbeiro + Serviços Oferecidos & Calculadora de Comissão -->
+                <div class="gestor-two-col">
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3>Desempenho por Barbeiro no Período</h3>
+                            <p>Quantidade de atendimentos, serviços realizados e caixa gerado por profissional.</p>
+                        </div>
+                        <div id="gestor-barbeiros-resumo" class="gestor-list-stack">
+                            <p class="slots-empty-state">Nenhum atendimento concluído no período selecionado.</p>
+                        </div>
+                    </div>
+
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3>Calculadora & Ajuste de Comissão</h3>
+                            <p>Analise os atendimentos de um barbeiro e insira qualquer porcentagem (%) para calcular ou salvar a comissão.</p>
+                        </div>
+                        <div class="comissao-calc-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="calc-select-barbeiro">Barbeiro</label>
+                                    <select id="calc-select-barbeiro" class="custom-date-input">
+                                        <option value="">Selecione um barbeiro...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="calc-input-percentual">Porcentagem do Barbeiro (%)</label>
+                                    <input type="number" id="calc-input-percentual" min="0" max="100" step="0.5" placeholder="Ex: 50">
+                                </div>
+                            </div>
+                            <div class="calc-actions">
+                                <button type="button" class="btn btn-primary" id="btn-simular-comissao">
+                                    Calcular Comissão no Período
+                                </button>
+                                <button type="button" class="btn btn-outline-sm" id="btn-salvar-comissao-fixa" title="Salva este percentual como padrão para os próximos atendimentos deste barbeiro">
+                                    Salvar % Fixo no Cadastro
+                                </button>
+                            </div>
+                        </div>
+                        <div id="calc-resultado-box" class="calc-resultado-box" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <!-- Histórico Imutável de Atendimentos / Serviços -->
+                <div class="gestor-panel-card" style="margin-top: 1.5rem;">
+                    <div class="panel-card-header panel-header-flex">
+                        <div>
+                            <h3>Histórico Permanente de Atendimentos & Serviços</h3>
+                            <p>Registro imutável: permanece preservado mesmo que um barbeiro ou serviço seja desativado ou removido posteriormente.</p>
+                        </div>
+                        <div class="historico-filters">
+                            <select id="filtro-historico-barbeiro" class="custom-date-input">
+                                <option value="">Todos os barbeiros</option>
+                            </select>
+                            <select id="filtro-historico-servico" class="custom-date-input">
+                                <option value="">Todos os serviços</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="gestor-table">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Cliente</th>
+                                    <th>Barbeiro</th>
+                                    <th>Serviço Oferecido</th>
+                                    <th>Pagamento</th>
+                                    <th>Valor Pago</th>
+                                    <th>Comissão (%)</th>
+                                    <th>Valor Comissão</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-historico-body">
+                                <tr><td colspan="8" class="slots-empty-state">Carregando histórico...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA DE AGENDAMENTOS PARA CONCLUIR (BARBEIRO E GESTOR) -->
+            <div class="gestor-panel-card" style="margin-top: 1.5rem;">
+                <div class="panel-card-header panel-header-flex">
+                    <div>
+                        <h3>Atendimentos Agendados — Dar Baixa / Concluir</h3>
+                        <p>Ao concluir um atendimento, informe o valor pago e a forma de pagamento para lançá-lo no caixa e no histórico.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline-sm" id="btn-recarregar-fila">Atualizar Lista</button>
+                </div>
+                <div id="lista-fila-conclusao" class="my-appointments-list">
+                    <p class="slots-empty-state">Nenhum agendamento pendente encontrado.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MODAL CONCLUIR ATENDIMENTO (INFORMAR VALOR PAGO E FORMA DE PAGAMENTO) -->
+    <div id="modal-concluir-atendimento" class="modal-backdrop" style="display: none;">
+        <div class="modal-card auth-modal-card">
+            <button type="button" class="btn-close-modal" id="btn-fechar-modal-concluir" aria-label="Fechar">✕</button>
+            <div class="modal-header-simple">
+                <h3>Concluir Atendimento</h3>
+                <p id="modal-concluir-resumo">Confirme o valor pago pelo cliente para registrar no caixa.</p>
+            </div>
+            <form id="form-concluir-atendimento" class="form-vertical">
+                <input type="hidden" id="concluir-agendamento-id">
+                <div class="form-group">
+                    <label for="concluir-valor-pago">Valor Pago (R$)</label>
+                    <input type="number" id="concluir-valor-pago" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="concluir-forma-pagamento">Forma de Pagamento</label>
+                    <select id="concluir-forma-pagamento" class="custom-date-input" required>
+                        <option value="PIX">PIX</option>
+                        <option value="DINHEIRO">Dinheiro</option>
+                        <option value="CARTAO_DEBITO">Cartão de Débito</option>
+                        <option value="CARTAO_CREDITO">Cartão de Crédito</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-full">
+                    Confirmar Recebimento & Concluir
+                </button>
+            </form>
+        </div>
+    </div>
 
     <!-- MODAL DE SUCESSO / TICKET DE CONFIRMAÇÃO -->
     <div id="modal-sucesso" class="modal-backdrop" style="display: none;">

@@ -149,6 +149,10 @@ function atualizarEstadoAuth() {
     const btnLoginNav = document.getElementById('btn-abrir-login');
     const userBadgeNav = document.getElementById('user-badge');
     const navMeusAgendamentos = document.getElementById('nav-meus-agendamentos-item');
+    const navGestorDashboard = document.getElementById('nav-gestor-dashboard-item');
+    const navBarbeiroAgenda = document.getElementById('nav-barbeiro-agenda-item');
+    const secGestor = document.getElementById('gestor-dashboard');
+    const gestorOnlyBox = document.getElementById('gestor-only-container');
 
     const cardLogged = document.getElementById('cliente-autenticado-box');
     const boxDeslogado = document.getElementById('cliente-deslogado-box');
@@ -156,13 +160,33 @@ function atualizarEstadoAuth() {
     if (user && user.nome) {
         if (btnLoginNav) btnLoginNav.style.display = 'none';
         if (userBadgeNav) userBadgeNav.style.display = 'flex';
-        if (navMeusAgendamentos) navMeusAgendamentos.style.display = 'block';
+
+        const isGestor = user.role === 'ROLE_GESTOR';
+        const isBarbeiro = user.role === 'ROLE_BARBEIRO';
+
+        if (navMeusAgendamentos) navMeusAgendamentos.style.display = (!isBarbeiro) ? 'block' : 'none';
+        if (navGestorDashboard) navGestorDashboard.style.display = isGestor ? 'block' : 'none';
+        if (navBarbeiroAgenda) navBarbeiroAgenda.style.display = isBarbeiro ? 'block' : 'none';
+
+        if (secGestor) {
+            if (isGestor || isBarbeiro) {
+                secGestor.style.display = 'block';
+                if (gestorOnlyBox) gestorOnlyBox.style.display = isGestor ? 'block' : 'none';
+                carregarPainelGestorOuBarbeiro();
+            } else {
+                secGestor.style.display = 'none';
+            }
+        }
 
         const avatarLetter = user.nome.charAt(0).toUpperCase();
         const navAvatar = document.getElementById('nav-user-avatar');
         const navName = document.getElementById('nav-user-name');
+        const navRole = userBadgeNav ? userBadgeNav.querySelector('.user-role') : null;
         if (navAvatar) navAvatar.textContent = avatarLetter;
         if (navName) navName.textContent = user.nome.split(' ')[0];
+        if (navRole) {
+            navRole.textContent = isGestor ? 'Gestor' : (isBarbeiro ? 'Barbeiro' : 'Cliente VIP');
+        }
 
         // Passo 4 do Agendamento
         if (cardLogged) {
@@ -177,6 +201,9 @@ function atualizarEstadoAuth() {
         if (btnLoginNav) btnLoginNav.style.display = 'inline-flex';
         if (userBadgeNav) userBadgeNav.style.display = 'none';
         if (navMeusAgendamentos) navMeusAgendamentos.style.display = 'none';
+        if (navGestorDashboard) navGestorDashboard.style.display = 'none';
+        if (navBarbeiroAgenda) navBarbeiroAgenda.style.display = 'none';
+        if (secGestor) secGestor.style.display = 'none';
 
         if (cardLogged) cardLogged.style.display = 'none';
         if (boxDeslogado) boxDeslogado.style.display = 'block';
@@ -826,3 +853,372 @@ window.cancelarAgendamentoModal = async function(id) {
         showToast(err.message, 'error');
     }
 };
+
+// =========================================================================
+// PAINEL DINÂMICO DO GESTOR: RELATÓRIO DE PERÍODO, CAIXA, HISTÓRICO E COMISSÃO
+// =========================================================================
+let gestorEventosConfigurados = false;
+
+function formatarIsoLocal(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function aplicarPresetPeriodo(preset) {
+    const hoje = new Date();
+    const inputIni = document.getElementById('gestor-data-inicio');
+    const inputFim = document.getElementById('gestor-data-fim');
+    if (!inputIni || !inputFim) return;
+
+    if (preset === 'hoje') {
+        const iso = formatarIsoLocal(hoje);
+        inputIni.value = iso;
+        inputFim.value = iso;
+    } else if (preset === '7dias') {
+        const d7 = new Date(hoje);
+        d7.setDate(hoje.getDate() - 6);
+        inputIni.value = formatarIsoLocal(d7);
+        inputFim.value = formatarIsoLocal(hoje);
+    } else if (preset === 'tudo') {
+        inputIni.value = '2020-01-01';
+        inputFim.value = formatarIsoLocal(hoje);
+    } else {
+        const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        inputIni.value = formatarIsoLocal(primeiroDiaMes);
+        inputFim.value = formatarIsoLocal(hoje);
+    }
+}
+
+async function carregarPainelGestorOuBarbeiro() {
+    configurarEventosGestor();
+    const user = api.getUsuarioLogado();
+    if (!user || !appState.backendOnline) return;
+
+    const inputIni = document.getElementById('gestor-data-inicio');
+    const inputFim = document.getElementById('gestor-data-fim');
+    if (inputIni && !inputIni.value) {
+        aplicarPresetPeriodo('mes');
+    }
+
+    if (user.role === 'ROLE_GESTOR') {
+        await Promise.all([
+            atualizarRelatorioEHistoricoGestor(),
+            carregarFilaConclusao()
+        ]);
+    } else if (user.role === 'ROLE_BARBEIRO') {
+        await carregarFilaConclusao();
+    }
+}
+
+async function atualizarRelatorioEHistoricoGestor() {
+    const dataInicio = document.getElementById('gestor-data-inicio')?.value;
+    const dataFim = document.getElementById('gestor-data-fim')?.value;
+
+    try {
+        const [relatorio, todosBarbeiros] = await Promise.all([
+            api.obterRelatorioPeriodo(dataInicio, dataFim),
+            api.listarBarbeiros(false, 100).catch(() => [])
+        ]);
+
+        renderizarKpisRelatorio(relatorio);
+        renderizarResumoBarbeirosPeriodo(relatorio.porBarbeiro || []);
+        popularSelectsGestor(todosBarbeiros, relatorio);
+        await carregarTabelaHistorico();
+    } catch (err) {
+        showToast(err.message || 'Erro ao carregar relatório do período.', 'error');
+    }
+}
+
+function renderizarKpisRelatorio(rel) {
+    document.getElementById('kpi-caixa-total').textContent = formatadorMoeda.format(rel.caixaTotal || 0);
+    document.getElementById('kpi-ticket-medio').textContent = `Ticket médio: ${formatadorMoeda.format(rel.ticketMedio || 0)}`;
+    document.getElementById('kpi-atendimentos-realizados').textContent = String(rel.totalAtendimentosRealizados || 0);
+    document.getElementById('kpi-pendentes-cancelados').textContent =
+        `${rel.agendamentosPendentesNoPeriodo || 0} agendados • ${rel.agendamentosCanceladosNoPeriodo || 0} cancelados`;
+    document.getElementById('kpi-comissao-total').textContent = formatadorMoeda.format(rel.comissaoTotal || 0);
+    document.getElementById('kpi-lucro-liquido').textContent = formatadorMoeda.format(rel.lucroLiquido || 0);
+}
+
+function renderizarResumoBarbeirosPeriodo(lista) {
+    const container = document.getElementById('gestor-barbeiros-resumo');
+    if (!container) return;
+
+    if (!lista.length) {
+        container.innerHTML = '<p class="slots-empty-state">Nenhum atendimento concluído neste período.</p>';
+        return;
+    }
+
+    container.innerHTML = lista.map(b => {
+        const servicosTags = (b.servicos || []).map(s =>
+            `<span class="servico-pill">${s.servicoNome}: <strong>${s.quantidade}x</strong> (${formatadorMoeda.format(s.totalPago || 0)})</span>`
+        ).join(' ');
+
+        const badgeStatus = b.barbeiroAtivo === false
+            ? '<span class="barber-status-badge" style="color: var(--warning);">Histórico (Inativo/Removido)</span>'
+            : `<span class="barber-status-badge">Comissão padrão: ${b.percentualComissaoAtual ?? 50}%</span>`;
+
+        return `
+            <div class="barbeiro-periodo-item">
+                <div class="bp-top">
+                    <div>
+                        <h4>${b.barbeiroNome}</h4>
+                        ${badgeStatus}
+                    </div>
+                    <div class="bp-metrics">
+                        <span><strong>${b.totalAtendimentos}</strong> atend.</span>
+                        <span>Caixa: <strong>${formatadorMoeda.format(b.totalPago || 0)}</strong></span>
+                        <span>Comissão: <strong class="text-warning">${formatadorMoeda.format(b.totalComissao || 0)}</strong></span>
+                    </div>
+                </div>
+                <div class="bp-servicos">${servicosTags || '<small>Sem detalhamento de serviço</small>'}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function popularSelectsGestor(todosBarbeiros, relatorio) {
+    const selCalc = document.getElementById('calc-select-barbeiro');
+    const selHistBarbeiro = document.getElementById('filtro-historico-barbeiro');
+    const selHistServico = document.getElementById('filtro-historico-servico');
+
+    // Combina barbeiros cadastrados + barbeiros presentes apenas no histórico (excluídos)
+    const mapaBarbeiros = new Map();
+    (todosBarbeiros || []).forEach(b => mapaBarbeiros.set(b.id, {
+        id: b.id,
+        nome: b.nome,
+        percentualComissao: b.percentualComissao ?? 50,
+        ativo: b.ativo
+    }));
+    (relatorio?.porBarbeiro || []).forEach(b => {
+        if (!mapaBarbeiros.has(b.barbeiroId)) {
+            mapaBarbeiros.set(b.barbeiroId, {
+                id: b.barbeiroId,
+                nome: `${b.barbeiroNome} (Histórico)`,
+                percentualComissao: b.percentualComissaoAtual ?? 50,
+                ativo: false
+            });
+        }
+    });
+
+    const listaBarbeiros = Array.from(mapaBarbeiros.values());
+    if (selCalc) {
+        const valorAtual = selCalc.value;
+        selCalc.innerHTML = '<option value="">Selecione um barbeiro...</option>' +
+            listaBarbeiros.map(b => `<option value="${b.id}" data-pct="${b.percentualComissao}">${b.nome} (${b.percentualComissao}%)</option>`).join('');
+        if (valorAtual) selCalc.value = valorAtual;
+    }
+
+    if (selHistBarbeiro) {
+        const valorAtual = selHistBarbeiro.value;
+        selHistBarbeiro.innerHTML = '<option value="">Todos os barbeiros</option>' +
+            listaBarbeiros.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+        if (valorAtual) selHistBarbeiro.value = valorAtual;
+    }
+
+    if (selHistServico) {
+        const valorAtual = selHistServico.value;
+        const mapaServicos = new Map();
+        (appState.servicos || []).forEach(s => mapaServicos.set(s.id, s.nome));
+        (relatorio?.porServico || []).forEach(s => {
+            if (s.servicoId && !mapaServicos.has(s.servicoId)) {
+                mapaServicos.set(s.servicoId, `${s.servicoNome} (Histórico)`);
+            }
+        });
+        selHistServico.innerHTML = '<option value="">Todos os serviços</option>' +
+            Array.from(mapaServicos.entries()).map(([id, nome]) => `<option value="${id}">${nome}</option>`).join('');
+        if (valorAtual) selHistServico.value = valorAtual;
+    }
+}
+
+async function carregarTabelaHistorico() {
+    const tbody = document.getElementById('tabela-historico-body');
+    if (!tbody) return;
+
+    const dataInicio = document.getElementById('gestor-data-inicio')?.value;
+    const dataFim = document.getElementById('gestor-data-fim')?.value;
+    const barbeiroId = document.getElementById('filtro-historico-barbeiro')?.value || null;
+    const servicoId = document.getElementById('filtro-historico-servico')?.value || null;
+
+    try {
+        const page = await api.listarHistoricoAtendimentos({ dataInicio, dataFim, barbeiroId, servicoId, size: 50 });
+        const itens = page?.content || [];
+
+        if (!itens.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="slots-empty-state">Nenhum atendimento registrado neste filtro.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = itens.map(h => {
+            const dt = new Date(h.dataHoraAtendimento);
+            const dataStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const clienteTag = h.clienteNaoUsuario
+                ? `${h.clienteNome || 'Cliente Avulso'} <small>(Avulso)</small>`
+                : (h.clienteNome || '--');
+
+            return `
+                <tr>
+                    <td>${dataStr}</td>
+                    <td>${clienteTag}</td>
+                    <td><strong>${h.barbeiroNome}</strong></td>
+                    <td>${h.servicoNome}</td>
+                    <td><span class="servico-pill">${h.formaPagamento}</span></td>
+                    <td><strong>${formatadorMoeda.format(h.valorPago || 0)}</strong></td>
+                    <td>${h.percentualComissao}%</td>
+                    <td class="text-warning"><strong>${formatadorMoeda.format(h.valorComissao || 0)}</strong></td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" class="slots-empty-state" style="color: var(--danger);">${err.message}</td></tr>`;
+    }
+}
+
+async function carregarFilaConclusao() {
+    const container = document.getElementById('lista-fila-conclusao');
+    const user = api.getUsuarioLogado();
+    if (!container || !user || !appState.backendOnline) return;
+
+    try {
+        const lista = user.role === 'ROLE_GESTOR'
+            ? await api.listarAgendamentosGestor('AGENDADO', 0, 30)
+            : await api.minhaAgendaBarbeiro(0, 30);
+
+        const pendentes = (lista || []).filter(a => a.status === 'AGENDADO');
+        if (!pendentes.length) {
+            container.innerHTML = '<p class="slots-empty-state">Não há agendamentos com status AGENDADO no momento.</p>';
+            return;
+        }
+
+        container.innerHTML = pendentes.map(a => {
+            const dt = new Date(a.dataHora);
+            const dataStr = dt.toLocaleDateString('pt-BR');
+            const horaStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const precoSugerido = a.preco ?? 0;
+
+            return `
+                <div class="appointment-item-card">
+                    <div class="app-item-info">
+                        <h4>#${a.id} • ${a.servicoNome || 'Atendimento'} — ${a.clienteNome || a.nomeNaoUsuario || 'Cliente'}</h4>
+                        <p>Barbeiro: <strong>${a.barbeiroNome}</strong> • 📅 ${dataStr} às ${horaStr}h • Valor ref.: ${formatadorMoeda.format(precoSugerido)}</p>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="abrirModalConcluir(${a.id}, ${precoSugerido}, '${(a.servicoNome || 'Atendimento').replace(/'/g, '')}', '${(a.barbeiroNome || '').replace(/'/g, '')}')">
+                            ✓ Concluir Atendimento
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        container.innerHTML = `<p class="slots-empty-state" style="color: var(--danger);">${err.message}</p>`;
+    }
+}
+
+window.abrirModalConcluir = function(id, precoSugerido, servicoNome, barbeiroNome) {
+    document.getElementById('concluir-agendamento-id').value = id;
+    document.getElementById('concluir-valor-pago').value = Number(precoSugerido || 0).toFixed(2);
+    document.getElementById('modal-concluir-resumo').textContent =
+        `Agendamento #${id} • ${servicoNome} (${barbeiroNome})`;
+    document.getElementById('modal-concluir-atendimento').style.display = 'flex';
+};
+
+function configurarEventosGestor() {
+    if (gestorEventosConfigurados) return;
+    gestorEventosConfigurados = true;
+
+    document.getElementById('btn-aplicar-periodo')?.addEventListener('click', () => {
+        document.querySelectorAll('.period-Quick-presets .chip-date').forEach(b => b.classList.remove('active'));
+        atualizarRelatorioEHistoricoGestor();
+    });
+
+    document.querySelectorAll('.period-Quick-presets .chip-date').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.period-Quick-presets .chip-date').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            aplicarPresetPeriodo(btn.dataset.preset);
+            atualizarRelatorioEHistoricoGestor();
+        });
+    });
+
+    document.getElementById('filtro-historico-barbeiro')?.addEventListener('change', carregarTabelaHistorico);
+    document.getElementById('filtro-historico-servico')?.addEventListener('change', carregarTabelaHistorico);
+    document.getElementById('btn-recarregar-fila')?.addEventListener('click', carregarFilaConclusao);
+
+    document.getElementById('calc-select-barbeiro')?.addEventListener('change', (e) => {
+        const opt = e.target.selectedOptions[0];
+        const pct = opt?.dataset?.pct;
+        if (pct !== undefined) {
+            document.getElementById('calc-input-percentual').value = pct;
+        }
+    });
+
+    document.getElementById('btn-simular-comissao')?.addEventListener('click', async () => {
+        const barbeiroId = document.getElementById('calc-select-barbeiro')?.value;
+        const percentual = document.getElementById('calc-input-percentual')?.value;
+        const dataInicio = document.getElementById('gestor-data-inicio')?.value;
+        const dataFim = document.getElementById('gestor-data-fim')?.value;
+
+        if (!barbeiroId) {
+            showToast('Selecione um barbeiro para calcular a comissão.', 'error');
+            return;
+        }
+
+        try {
+            const res = await api.calcularComissaoBarbeiro(barbeiroId, { dataInicio, dataFim, percentual });
+            const box = document.getElementById('calc-resultado-box');
+            box.style.display = 'block';
+            box.innerHTML = `
+                <div class="calc-res-grid">
+                    <div><span>Profissional:</span> <strong>${res.barbeiroNome}</strong></div>
+                    <div><span>Atendimentos no período:</span> <strong>${res.totalAtendimentos}</strong></div>
+                    <div><span>Total faturado pelo barbeiro:</span> <strong>${formatadorMoeda.format(res.totalFaturado || 0)}</strong></div>
+                    <div><span>Porcentagem aplicada:</span> <strong>${res.percentualAplicado}%</strong> (cadastro atual: ${res.percentualCadastradoAtual}%)</div>
+                    <div><span>Comissão calculada (${res.percentualAplicado}%):</span> <strong class="text-warning">${formatadorMoeda.format(res.comissaoCalculada || 0)}</strong></div>
+                    <div><span>Comissão gravada no histórico:</span> <strong>${formatadorMoeda.format(res.comissaoRegistradaNoHistorico || 0)}</strong></div>
+                    <div><span>Saldo líquido da barbearia:</span> <strong class="text-success">${formatadorMoeda.format(res.liquidoBarbearia || 0)}</strong></div>
+                </div>
+            `;
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    document.getElementById('btn-salvar-comissao-fixa')?.addEventListener('click', async () => {
+        const barbeiroId = document.getElementById('calc-select-barbeiro')?.value;
+        const percentual = document.getElementById('calc-input-percentual')?.value;
+        if (!barbeiroId || percentual === '') {
+            showToast('Selecione o barbeiro e informe a porcentagem.', 'error');
+            return;
+        }
+        try {
+            await api.atualizarPercentualComissaoBarbeiro(barbeiroId, percentual);
+            showToast(`Percentual fixo do barbeiro atualizado para ${percentual}%!`, 'success');
+            await atualizarRelatorioEHistoricoGestor();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+
+    document.getElementById('btn-fechar-modal-concluir')?.addEventListener('click', () => {
+        document.getElementById('modal-concluir-atendimento').style.display = 'none';
+    });
+
+    document.getElementById('form-concluir-atendimento')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('concluir-agendamento-id').value;
+        const valorPago = document.getElementById('concluir-valor-pago').value;
+        const formaPagamento = document.getElementById('concluir-forma-pagamento').value;
+
+        try {
+            await api.concluirAtendimento(id, valorPago, formaPagamento);
+            document.getElementById('modal-concluir-atendimento').style.display = 'none';
+            showToast('Atendimento concluído e registrado no caixa e no histórico!', 'success');
+            await carregarPainelGestorOuBarbeiro();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    });
+}
+
