@@ -5,6 +5,8 @@ import dev.vitor.barbearia.ProjetoBarber.agendamento.event.AgendamentoCriadoEven
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.AlterarHorarioDTO;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroModel;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.BarbeiroService;
+import dev.vitor.barbearia.ProjetoBarber.barbeiro.BloqueioAgendaModel;
+import dev.vitor.barbearia.ProjetoBarber.barbeiro.BloqueioAgendaRepository;
 import dev.vitor.barbearia.ProjetoBarber.barbeiro.CancelarAgendamentoBarbeiroDTO;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteModel;
 import dev.vitor.barbearia.ProjetoBarber.cliente.ClienteService;
@@ -15,6 +17,7 @@ import dev.vitor.barbearia.ProjetoBarber.historico.AtendimentoHistoricoRepositor
 import dev.vitor.barbearia.ProjetoBarber.servico.ServicoModel;
 import dev.vitor.barbearia.ProjetoBarber.servico.ServicoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +30,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +47,7 @@ public class AgendamentoService {
     private final ServicoService servicoService;
     private final ApplicationEventPublisher eventPublisher;
     private final AtendimentoHistoricoRepository historicoRepository;
+    private final BloqueioAgendaRepository bloqueioAgendaRepository;
 
     @Transactional(readOnly = true)
     public Page<AgendamentoModel> listarTodos(Pageable pageable) {
@@ -87,19 +94,40 @@ public class AgendamentoService {
             throw new BusinessRuleException("O barbeiro selecionado está inativo.");
         }
 
-        // Resolução de Serviço, Preço e Duração
-        ServicoModel servico = null;
+        // Resolução de Serviço(s) — suporta 1 ou múltiplos serviços combinados no mesmo agendamento
+        Set<Long> idsServicos = new LinkedHashSet<>();
+        if (dto.servicoIds() != null) {
+            dto.servicoIds().stream().filter(id -> id != null).forEach(idsServicos::add);
+        }
+        if (dto.servicoId() != null) {
+            idsServicos.add(dto.servicoId());
+        }
+
+        ServicoModel servicoPrincipal = null;
         int duracaoMinutos = 30;
         BigDecimal preco = null;
+        String descricaoServicos = null;
 
-        if (dto.servicoId() != null) {
-            servico = servicoService.buscarPorId(dto.servicoId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com ID: " + dto.servicoId()));
-            if (Boolean.FALSE.equals(servico.getAtivo())) {
-                throw new BusinessRuleException("O serviço selecionado está inativo.");
+        if (!idsServicos.isEmpty()) {
+            List<ServicoModel> servicosSelecionados = new ArrayList<>();
+            for (Long sId : idsServicos) {
+                ServicoModel s = servicoService.buscarPorId(sId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado com ID: " + sId));
+                if (Boolean.FALSE.equals(s.getAtivo())) {
+                    throw new BusinessRuleException("O serviço selecionado está inativo: " + s.getNome());
+                }
+                servicosSelecionados.add(s);
             }
-            duracaoMinutos = servico.getDuracaoMinutos();
-            preco = servico.getPreco();
+            servicoPrincipal = servicosSelecionados.get(0);
+            duracaoMinutos = servicosSelecionados.stream()
+                    .mapToInt(s -> s.getDuracaoMinutos() != null ? s.getDuracaoMinutos() : 30)
+                    .sum();
+            preco = servicosSelecionados.stream()
+                    .map(s -> s.getPreco() != null ? s.getPreco() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            descricaoServicos = servicosSelecionados.stream()
+                    .map(ServicoModel::getNome)
+                    .collect(Collectors.joining(" + "));
         }
 
         LocalDateTime inicio = dto.dataHora();
@@ -107,6 +135,12 @@ public class AgendamentoService {
 
         // Regra 0: Valida se o horário solicitado respeita o expediente e o intervalo de pausa do barbeiro
         validarDentroDoExpedienteEPausa(barbeiro, inicio.toLocalTime(), fim.toLocalTime());
+
+        // Regra 0.1: Verifica se há bloqueio pontual de agenda / folga para o barbeiro no intervalo
+        if (bloqueioAgendaRepository != null
+                && bloqueioAgendaRepository.existsConflitoBloqueio(dto.barbeiroId(), inicio, fim)) {
+            throw new BusinessRuleException("O barbeiro possui um bloqueio de agenda/folga registrado neste horário.");
+        }
 
         // Regra 1: Limite diário de agendamento por dia do cliente com o mesmo barbeiro (apenas para cliente cadastrado)
         if (cliente != null) {
@@ -132,7 +166,9 @@ public class AgendamentoService {
         AgendamentoModel agendamento = AgendamentoModel.builder()
                 .cliente(cliente)
                 .barbeiro(barbeiro)
-                .servico(servico)
+                .servico(servicoPrincipal)
+                .descricaoServicos(descricaoServicos)
+                .duracaoTotalMinutos(duracaoMinutos)
                 .dataHora(inicio)
                 .dataHoraFim(fim)
                 .preco(preco)
@@ -202,11 +238,18 @@ public class AgendamentoService {
         BarbeiroModel barbeiro = barbeiroService.buscarPorIdComLock(agendamento.getBarbeiro().getId())
                 .orElse(agendamento.getBarbeiro());
 
-        int duracao = agendamento.getServico() != null ? agendamento.getServico().getDuracaoMinutos() : 30;
+        int duracao = agendamento.getDuracaoTotalMinutos() != null
+                ? agendamento.getDuracaoTotalMinutos()
+                : (agendamento.getServico() != null ? agendamento.getServico().getDuracaoMinutos() : 30);
         LocalDateTime novoInicio = dto.novaDataHora();
         LocalDateTime novoFim = novoInicio.plusMinutes(duracao);
 
         validarDentroDoExpedienteEPausa(barbeiro, novoInicio.toLocalTime(), novoFim.toLocalTime());
+
+        if (bloqueioAgendaRepository != null
+                && bloqueioAgendaRepository.existsConflitoBloqueio(barbeiro.getId(), novoInicio, novoFim)) {
+            throw new BusinessRuleException("O barbeiro possui um bloqueio de agenda/folga registrado no novo horário selecionado.");
+        }
 
         boolean conflito = agendamentoRepository.existsConflitoHorarioBarbeiroIgnorandoId(
                 agendamento.getBarbeiro().getId(), novoInicio, novoFim, StatusAgendamento.AGENDADO, agendamento.getId());
@@ -316,13 +359,16 @@ public class AgendamentoService {
         BigDecimal valorComissao = valorPago.multiply(percentual).divide(CEM, 2, RoundingMode.HALF_UP);
 
         ClienteModel cliente = agendamento.getCliente();
+        String nomeServicoSnapshot = (agendamento.getDescricaoServicos() != null && !agendamento.getDescricaoServicos().isBlank())
+                ? agendamento.getDescricaoServicos()
+                : (servico != null ? servico.getNome() : "Atendimento avulso");
 
         AtendimentoHistoricoModel historico = AtendimentoHistoricoModel.builder()
                 .agendamentoId(agendamento.getId())
                 .barbeiroId(barbeiro.getId())
                 .barbeiroNome(barbeiro.getNome())
                 .servicoId(servico != null ? servico.getId() : null)
-                .servicoNome(servico != null ? servico.getNome() : "Atendimento avulso")
+                .servicoNome(nomeServicoSnapshot)
                 .clienteId(cliente != null ? cliente.getId() : null)
                 .clienteNome(cliente != null ? cliente.getNome() : agendamento.getNomeNaoUsuario())
                 .clienteNaoUsuario(cliente == null)
@@ -344,11 +390,24 @@ public class AgendamentoService {
 
     @Transactional(readOnly = true)
     public List<LocalTime> calcularHorariosDisponiveis(Long barbeiroId, Long servicoId, LocalDate data) {
+        List<Long> servicoIds = servicoId != null ? List.of(servicoId) : List.of();
+        return calcularHorariosDisponiveis(barbeiroId, servicoIds, data);
+    }
+
+    @Transactional(readOnly = true)
+    public List<LocalTime> calcularHorariosDisponiveis(Long barbeiroId, List<Long> servicoIds, LocalDate data) {
         int duracaoMinutos = 30;
-        if (servicoId != null) {
-            ServicoModel servico = servicoService.buscarPorId(servicoId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado: " + servicoId));
-            duracaoMinutos = servico.getDuracaoMinutos();
+        if (servicoIds != null && !servicoIds.isEmpty()) {
+            int soma = 0;
+            for (Long sId : servicoIds) {
+                if (sId == null) continue;
+                ServicoModel servico = servicoService.buscarPorId(sId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Serviço não encontrado: " + sId));
+                soma += servico.getDuracaoMinutos() != null ? servico.getDuracaoMinutos() : 30;
+            }
+            if (soma > 0) {
+                duracaoMinutos = soma;
+            }
         }
 
         BarbeiroModel barbeiro = barbeiroService.buscarPorId(barbeiroId).orElse(null);
@@ -369,6 +428,10 @@ public class AgendamentoService {
         List<AgendamentoModel> agendamentos = agendamentoRepository.findByBarbeiroIdAndDataHoraBetweenAndStatus(
                 barbeiroId, inicioDia, fimDia, StatusAgendamento.AGENDADO);
 
+        List<BloqueioAgendaModel> bloqueios = bloqueioAgendaRepository != null
+                ? bloqueioAgendaRepository.findByBarbeiroIdNoPeriodo(barbeiroId, inicioDia, fimDia)
+                : List.of();
+
         List<LocalTime> horariosLivres = new ArrayList<>();
         LocalTime slot = inicioExpediente;
 
@@ -385,13 +448,17 @@ public class AgendamentoService {
                     && slot.isBefore(fimPausa)
                     && slotFimTime.isAfter(inicioPausa);
 
+            // Verifica se o slot conflita com algum bloqueio pontual de agenda/folga do barbeiro
+            boolean emBloqueio = bloqueios.stream().anyMatch(b ->
+                    slotInicio.isBefore(b.getDataHoraFim()) && slotFim.isAfter(b.getDataHoraInicio()));
+
             boolean ocupado = agendamentos.stream().anyMatch(a -> {
                 LocalDateTime aInicio = a.getDataHora();
                 LocalDateTime aFim = a.getDataHoraFim() != null ? a.getDataHoraFim() : a.getDataHora().plusMinutes(30);
                 return slotInicio.isBefore(aFim) && slotFim.isAfter(aInicio);
             });
 
-            if (!noPassado && !emHorarioDePausa && !ocupado) {
+            if (!noPassado && !emHorarioDePausa && !emBloqueio && !ocupado) {
                 horariosLivres.add(slot);
             }
 

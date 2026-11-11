@@ -122,13 +122,15 @@ const api = {
 
     // --- DISPONIBILIDADE DE HORÁRIOS (Público) ---
     // Retorna array de LocalTime string: ["08:00:00", "08:30:00", ...]
-    async consultarDisponibilidade(barbeiroId, servicoId, dataIso) {
+    async consultarDisponibilidade(barbeiroId, servicoIdsOrId, dataIso) {
         const params = new URLSearchParams({
             barbeiroId: String(barbeiroId),
             data: String(dataIso)
         });
-        if (servicoId) {
-            params.set('servicoId', String(servicoId));
+        if (Array.isArray(servicoIdsOrId) && servicoIdsOrId.length > 0) {
+            servicoIdsOrId.forEach(id => params.append('servicoIds', String(id)));
+        } else if (servicoIdsOrId) {
+            params.set('servicoId', String(servicoIdsOrId));
         }
         return await this.request(`/agendamentos/disponibilidade?${params.toString()}`);
     },
@@ -324,6 +326,33 @@ const api = {
             method: 'PATCH',
             body: JSON.stringify({ observacao: observacao || '' })
         });
+    },
+
+    // --- BLOQUEIOS DE AGENDA / FOLGAS (BARBEIRO & GESTOR) ---
+    async listarBloqueiosAgenda() {
+        return await this.request('/barbeiro/bloqueios');
+    },
+
+    async criarBloqueioAgenda({ barbeiroId, dataHoraInicio, dataHoraFim, motivo }) {
+        const payload = { dataHoraInicio, dataHoraFim, motivo };
+        if (barbeiroId) {
+            payload.barbeiroId = Number(barbeiroId);
+        }
+        return await this.request('/barbeiro/bloqueios', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    },
+
+    async removerBloqueioAgenda(id) {
+        return await this.request(`/barbeiro/bloqueios/${encodeURIComponent(id)}`, {
+            method: 'DELETE'
+        });
+    },
+
+    // --- PROGRAMA DE FIDELIDADE DO CLIENTE ---
+    async obterMinhaFidelidade() {
+        return await this.request('/clientes/me/fidelidade');
     },
 
     // Verificação de saúde da API

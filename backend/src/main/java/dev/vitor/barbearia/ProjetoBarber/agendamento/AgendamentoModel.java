@@ -55,4 +55,12 @@ public class AgendamentoModel {
 
     @Column(name = "telefone_nao_usuario", length = 50)
     private String telefoneNaoUsuario;
+
+    /** Nomes concatenados dos serviços quando o cliente seleciona múltiplos serviços no carrinho. */
+    @Column(name = "descricao_servicos", length = 500)
+    private String descricaoServicos;
+
+    /** Duração total combinada (em minutos) dos serviços selecionados no agendamento. */
+    @Column(name = "duracao_total_minutos")
+    private Integer duracaoTotalMinutos;
 }

@@ -187,11 +187,11 @@
                 <!-- CONTAINER DAS ETAPAS DO WIZARD -->
                 <div class="wizard-container">
 
-                    <!-- PASSO 1: ESCOLHA DO SERVIÇO -->
+                    <!-- PASSO 1: ESCOLHA DO SERVIÇO (MÚLTIPLOS SERVIÇOS PERMITIDOS) -->
                     <div class="wizard-step-pane active" id="wizard-pane-1">
                         <div class="step-heading">
-                            <h3>1. Qual serviço você deseja realizar hoje?</h3>
-                            <p>Clique em uma das opções abaixo para selecionar:</p>
+                            <h3>1. Quais serviços você deseja realizar hoje?</h3>
+                            <p>Selecione <strong>um ou mais serviços</strong> (corte + barba + sobrancelha) — o sistema soma o tempo e o valor automaticamente:</p>
                         </div>
                         <div id="wizard-servicos-list" class="wizard-options-grid">
                             <!-- Injetado dinamicamente -->
@@ -556,19 +556,68 @@
             </div>
 
             <!-- =========================================================
-                 ABA 2: AGENDA OPERACIONAL — DAR BAIXA, REAGENDAR OU CANCELAR (BARBEIRO & GESTOR)
+                 ABA 2: AGENDA OPERACIONAL — DAR BAIXA, REAGENDAR, WHATSAPP & BLOQUEIOS DE FOLGA (BARBEIRO & GESTOR)
                  ========================================================= -->
             <div class="gestor-tab-pane" data-pane="agenda" id="pane-operacional-agenda">
                 <div class="gestor-panel-card">
                     <div class="panel-card-header panel-header-flex">
                         <div>
-                            <h3>Controle de Agenda — Concluir, Alterar Horário ou Cancelar</h3>
-                            <p>Gerencie os compromissos ativos: dê baixa informando pagamento, altere horários com justificativa ou cancele.</p>
+                            <h3>Controle de Agenda — Concluir, Lembrete WhatsApp, Alterar Horário ou Cancelar</h3>
+                            <p>Gerencie os compromissos ativos: envie lembrete via WhatsApp, dê baixa no pagamento, registre faltas (No-Show) ou reagende.</p>
                         </div>
                         <button type="button" class="btn btn-outline-sm" id="btn-recarregar-fila">↻ Atualizar Agenda</button>
                     </div>
                     <div id="lista-fila-conclusao" class="my-appointments-list">
                         <p class="slots-empty-state">Nenhum agendamento pendente encontrado.</p>
+                    </div>
+                </div>
+
+                <!-- BLOQUEIO PONTUAL DE AGENDA / FOLGAS E AUSÊNCIAS -->
+                <div class="gestor-two-col" style="margin-top: 1.5rem;">
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header">
+                            <h3>🔒 Bloquear Horário / Folga Pontual</h3>
+                            <p>Feche um intervalo específico na agenda (ex: consulta médica, feriado, folga ou saída antecipada).</p>
+                        </div>
+                        <form id="form-bloqueio-agenda" class="operational-form">
+                            <div class="form-group" id="group-bloqueio-barbeiro" style="display: none;">
+                                <label for="bloqueio-select-barbeiro">Barbeiro *</label>
+                                <select id="bloqueio-select-barbeiro" class="custom-date-input w-full">
+                                    <option value="">Selecione o barbeiro...</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="bloqueio-data-inicio">Início do Bloqueio *</label>
+                                    <input type="datetime-local" id="bloqueio-data-inicio" class="custom-date-input w-full" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="bloqueio-data-fim">Fim do Bloqueio *</label>
+                                    <input type="datetime-local" id="bloqueio-data-fim" class="custom-date-input w-full" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="bloqueio-motivo">Motivo / Observação *</label>
+                                <input type="text" id="bloqueio-motivo" placeholder="Ex: Consulta médica / Folga à tarde" required>
+                            </div>
+                            <div class="calc-actions">
+                                <button type="submit" class="btn btn-primary">
+                                    🔒 Registrar Bloqueio na Agenda
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="gestor-panel-card">
+                        <div class="panel-card-header panel-header-flex">
+                            <div>
+                                <h3>Bloqueios e Folgas Cadastrados</h3>
+                                <p>Intervalos bloqueados não aparecem como horários disponíveis para os clientes.</p>
+                            </div>
+                        </div>
+                        <div id="lista-bloqueios-agenda" class="gestor-list-stack">
+                            <p class="slots-empty-state">Nenhum bloqueio pontual registrado.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -921,14 +970,17 @@
         </div>
     </div>
 
-    <!-- MODAL MEUS AGENDAMENTOS -->
+    <!-- MODAL MEUS AGENDAMENTOS & CARTÃO FIDELIDADE DIGITAL -->
     <div id="modal-meus-agendamentos" class="modal-backdrop" style="display: none;">
         <div class="modal-card modal-lg">
             <button type="button" class="btn-close-modal" id="btn-fechar-modal-meus-agendamentos" aria-label="Fechar">✕</button>
             <div class="modal-header-simple">
-                <h3>Meus Agendamentos</h3>
-                <p>Histórico e reservas ativas na Tenorio's Barber.</p>
+                <h3>Meus Agendamentos & Fidelidade VIP</h3>
+                <p>Acompanhe seu Cartão Fidelidade Digital e gerencie suas reservas na Tenorio's Barber.</p>
             </div>
+
+            <!-- CARTÃO FIDELIDADE DIGITAL -->
+            <div id="fidelidade-cliente-card" style="margin-bottom: 1.2rem;"></div>
 
             <div id="lista-meus-agendamentos" class="my-appointments-list">
                 <!-- Preenchido via JS -->

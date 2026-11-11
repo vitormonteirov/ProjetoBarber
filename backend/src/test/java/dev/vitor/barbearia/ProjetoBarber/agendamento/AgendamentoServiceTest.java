@@ -49,6 +49,9 @@ class AgendamentoServiceTest {
     @Mock
     private AtendimentoHistoricoRepository historicoRepository;
 
+    @Mock
+    private dev.vitor.barbearia.ProjetoBarber.barbeiro.BloqueioAgendaRepository bloqueioAgendaRepository;
+
     @InjectMocks
     private AgendamentoService agendamentoService;
 
@@ -283,5 +286,69 @@ class AgendamentoServiceTest {
         assertEquals(StatusAgendamento.NAO_COMPARECEU, resultado.getStatus());
         assertTrue(resultado.getNotaAlteracao().contains("No-Show registrado pelo Barbeiro"));
         verify(historicoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve agendar múltiplos serviços (carrinho) somando duração total e preço automaticamente")
+    void deveAgendarMultiplosServicosSomandoDuracaoEPreco() {
+        ServicoModel servicoBarba = ServicoModel.builder()
+                .id(2L).nome("Barba Terapia").duracaoMinutos(30).preco(new BigDecimal("35.00")).ativo(true).build();
+
+        AgendamentoDTO dto = new AgendamentoDTO(
+                1L, 1L, 1L, java.util.List.of(1L, 2L), horarioFuturo, null, null);
+
+        when(clienteService.buscarPorId(1L)).thenReturn(Optional.of(cliente));
+        when(barbeiroService.buscarPorIdComLock(1L)).thenReturn(Optional.of(barbeiro));
+        when(servicoService.buscarPorId(1L)).thenReturn(Optional.of(servico));
+        when(servicoService.buscarPorId(2L)).thenReturn(Optional.of(servicoBarba));
+        when(agendamentoRepository.existsByClienteIdAndBarbeiroIdAndDiaLimit(eq(1L), eq(1L), any(), any(), eq(StatusAgendamento.AGENDADO))).thenReturn(false);
+        when(agendamentoRepository.existsConflitoHorarioBarbeiro(eq(1L), eq(horarioFuturo), eq(horarioFuturo.plusMinutes(70)), eq(StatusAgendamento.AGENDADO))).thenReturn(false);
+        when(agendamentoRepository.save(any(AgendamentoModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AgendamentoModel resultado = agendamentoService.agendar(dto);
+
+        assertNotNull(resultado);
+        assertEquals(new BigDecimal("80.00"), resultado.getPreco());
+        assertEquals(70, resultado.getDuracaoTotalMinutos());
+        assertEquals("Corte Degrade + Barba Terapia", resultado.getDescricaoServicos());
+        assertEquals(horarioFuturo.plusMinutes(70), resultado.getDataHoraFim());
+    }
+
+    @Test
+    @DisplayName("Deve bloquear agendamento e ocultar slots quando houver bloqueio pontual de agenda/folga do barbeiro")
+    void deveRespeitarBloqueioPontualDeAgenda() {
+        AgendamentoDTO dto = new AgendamentoDTO(1L, 1L, 1L, horarioFuturo);
+
+        when(clienteService.buscarPorId(1L)).thenReturn(Optional.of(cliente));
+        when(barbeiroService.buscarPorIdComLock(1L)).thenReturn(Optional.of(barbeiro));
+        when(servicoService.buscarPorId(1L)).thenReturn(Optional.of(servico));
+        when(bloqueioAgendaRepository.existsConflitoBloqueio(eq(1L), eq(horarioFuturo), eq(horarioFuturo.plusMinutes(40)))).thenReturn(true);
+
+        BusinessRuleException ex = assertThrows(BusinessRuleException.class, () -> agendamentoService.agendar(dto));
+        assertTrue(ex.getMessage().contains("bloqueio de agenda/folga"));
+
+        // Verifica também que calcularHorariosDisponiveis oculta o intervalo bloqueado (ex: 15:00 às 16:00)
+        java.time.LocalDate dataFutura = java.time.LocalDate.now().plusDays(2);
+        dev.vitor.barbearia.ProjetoBarber.barbeiro.BloqueioAgendaModel bloqueio =
+                dev.vitor.barbearia.ProjetoBarber.barbeiro.BloqueioAgendaModel.builder()
+                        .id(1L)
+                        .barbeiro(barbeiro)
+                        .dataHoraInicio(dataFutura.atTime(15, 0))
+                        .dataHoraFim(dataFutura.atTime(16, 0))
+                        .motivo("Consulta médica")
+                        .build();
+
+        when(barbeiroService.buscarPorId(1L)).thenReturn(Optional.of(barbeiro));
+        when(agendamentoRepository.findByBarbeiroIdAndDataHoraBetweenAndStatus(eq(1L), any(), any(), eq(StatusAgendamento.AGENDADO)))
+                .thenReturn(java.util.List.of());
+        when(bloqueioAgendaRepository.findByBarbeiroIdNoPeriodo(eq(1L), any(), any()))
+                .thenReturn(java.util.List.of(bloqueio));
+
+        java.util.List<java.time.LocalTime> slots = agendamentoService.calcularHorariosDisponiveis(
+                1L, java.util.List.of(1L), dataFutura);
+
+        assertFalse(slots.contains(java.time.LocalTime.of(15, 0)), "Slot 15:00 deve estar oculto pelo bloqueio");
+        assertFalse(slots.contains(java.time.LocalTime.of(15, 30)), "Slot 15:30 deve estar oculto pelo bloqueio");
+        assertTrue(slots.contains(java.time.LocalTime.of(16, 0)), "Slot 16:00 após o bloqueio deve estar livre");
     }
 }

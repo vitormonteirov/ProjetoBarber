@@ -7,10 +7,12 @@ public record AgendamentoResponseDTO(
     Long id,
     Long clienteId,
     String clienteNome,
+    String clienteTelefone,
     Long barbeiroId,
     String barbeiroNome,
     Long servicoId,
     String servicoNome,
+    Integer duracaoTotalMinutos,
     LocalDateTime dataHora,
     LocalDateTime dataHoraFim,
     BigDecimal preco,
@@ -18,8 +20,51 @@ public record AgendamentoResponseDTO(
     String notaAlteracao,
     Boolean isNaoUsuario,
     String nomeNaoUsuario,
-    String telefoneNaoUsuario
+    String telefoneNaoUsuario,
+    Long clienteTotalConcluidos,
+    Long clienteFaltasCount,
+    Boolean clienteElegivelDescontoFidelidade
 ) {
+    public AgendamentoResponseDTO(
+            Long id,
+            Long clienteId,
+            String clienteNome,
+            Long barbeiroId,
+            String barbeiroNome,
+            Long servicoId,
+            String servicoNome,
+            LocalDateTime dataHora,
+            LocalDateTime dataHoraFim,
+            BigDecimal preco,
+            String status,
+            String notaAlteracao,
+            Boolean isNaoUsuario,
+            String nomeNaoUsuario,
+            String telefoneNaoUsuario) {
+        this(
+                id,
+                clienteId,
+                clienteNome,
+                telefoneNaoUsuario,
+                barbeiroId,
+                barbeiroNome,
+                servicoId,
+                servicoNome,
+                null,
+                dataHora,
+                dataHoraFim,
+                preco,
+                status,
+                notaAlteracao,
+                isNaoUsuario,
+                nomeNaoUsuario,
+                telefoneNaoUsuario,
+                0L,
+                0L,
+                false
+        );
+    }
+
     public AgendamentoResponseDTO(Long id, Long clienteId, String clienteNome, Long barbeiroId, String barbeiroNome, LocalDateTime dataHora, String status) {
         this(id, clienteId, clienteNome, barbeiroId, barbeiroNome, null, null, dataHora, null, null, status, null, false, null, null);
     }

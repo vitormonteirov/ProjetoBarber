@@ -49,8 +49,12 @@ public class AgendamentoController {
     public ResponseEntity<List<LocalTime>> consultarDisponibilidade(
             @RequestParam Long barbeiroId,
             @RequestParam(required = false) Long servicoId,
+            @RequestParam(required = false) List<Long> servicoIds,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
-        List<LocalTime> horarios = agendamentoService.calcularHorariosDisponiveis(barbeiroId, servicoId, data);
+        List<Long> ids = (servicoIds != null && !servicoIds.isEmpty())
+                ? servicoIds
+                : (servicoId != null ? List.of(servicoId) : List.of());
+        List<LocalTime> horarios = agendamentoService.calcularHorariosDisponiveis(barbeiroId, ids, data);
         return ResponseEntity.ok(horarios);
     }
 

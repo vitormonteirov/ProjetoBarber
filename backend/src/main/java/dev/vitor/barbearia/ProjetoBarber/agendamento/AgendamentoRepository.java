@@ -55,6 +55,8 @@ public interface AgendamentoRepository extends JpaRepository<AgendamentoModel, L
 
     long countByStatus(StatusAgendamento status);
 
+    long countByClienteIdAndStatus(Long clienteId, StatusAgendamento status);
+
     List<AgendamentoModel> findByStatus(StatusAgendamento status);
 
     Page<AgendamentoModel> findByStatusOrderByDataHoraAsc(StatusAgendamento status, Pageable pageable);

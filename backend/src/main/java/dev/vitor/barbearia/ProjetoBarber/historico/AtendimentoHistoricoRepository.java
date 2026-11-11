@@ -20,6 +20,8 @@ public interface AtendimentoHistoricoRepository extends JpaRepository<Atendiment
 
     boolean existsByAgendamentoId(Long agendamentoId);
 
+    long countByClienteId(Long clienteId);
+
     @Query("""
             SELECT h FROM AtendimentoHistoricoModel h
             WHERE h.dataHoraAtendimento >= :inicio AND h.dataHoraAtendimento < :fim
