@@ -52,6 +52,9 @@ const api = {
         const response = await fetch(url, { ...options, headers });
 
         if (!response.ok) {
+            if (response.status === 401 && !endpoint.startsWith('/auth/')) {
+                this.logout();
+            }
             let errorMsg = `Erro na requisição (${response.status})`;
             try {
                 const errJson = await response.json();
@@ -95,28 +98,39 @@ const api = {
 
     // --- BARBEIROS (Público) ---
     async listarBarbeiros(apenasAtivos = true, size = 50) {
-        const data = await this.request(`/barbeiros?apenasAtivos=${apenasAtivos}&size=${size}`);
+        const params = new URLSearchParams({
+            apenasAtivos: String(Boolean(apenasAtivos)),
+            size: String(Math.min(100, Number(size) || 50))
+        });
+        const data = await this.request(`/barbeiros?${params.toString()}`);
         return data?.content || [];
     },
 
     async buscarBarbeiroPorId(id) {
-        return await this.request(`/barbeiros/${id}`);
+        return await this.request(`/barbeiros/${encodeURIComponent(id)}`);
     },
 
     // --- SERVIÇOS (Público) ---
     async listarServicos(apenasAtivos = true, size = 50) {
-        const data = await this.request(`/servicos?apenasAtivos=${apenasAtivos}&size=${size}`);
+        const params = new URLSearchParams({
+            apenasAtivos: String(Boolean(apenasAtivos)),
+            size: String(Math.min(100, Number(size) || 50))
+        });
+        const data = await this.request(`/servicos?${params.toString()}`);
         return data?.content || [];
     },
 
     // --- DISPONIBILIDADE DE HORÁRIOS (Público) ---
     // Retorna array de LocalTime string: ["08:00:00", "08:30:00", ...]
     async consultarDisponibilidade(barbeiroId, servicoId, dataIso) {
-        let endpoint = `/agendamentos/disponibilidade?barbeiroId=${barbeiroId}&data=${dataIso}`;
+        const params = new URLSearchParams({
+            barbeiroId: String(barbeiroId),
+            data: String(dataIso)
+        });
         if (servicoId) {
-            endpoint += `&servicoId=${servicoId}`;
+            params.set('servicoId', String(servicoId));
         }
-        return await this.request(endpoint);
+        return await this.request(`/agendamentos/disponibilidade?${params.toString()}`);
     },
 
     // --- AGENDAMENTOS (Requer autenticação CLIENTE ou GESTOR) ---

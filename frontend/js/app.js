@@ -40,6 +40,17 @@ const MOCK_BARBEIROS = [
     { id: 3, nome: "Diego Ramos", email: "diego@tenoriosbarber.com", telefone: "(11) 98888-3333", ativo: true }
 ];
 
+// --- SANITIZAÇÃO ANTI-XSS (PROTEÇÃO CONTRA INJEÇÃO DE HTML/SCRIPTS) ---
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // --- NOTIFICAÇÕES TOAST ---
 function showToast(mensagem, tipo = 'success') {
     const container = document.getElementById('toast-container');
@@ -54,7 +65,7 @@ function showToast(mensagem, tipo = 'success') {
 
     toast.innerHTML = `
         <span style="font-size: 1.2rem;">${icone}</span>
-        <div style="font-size: 0.9rem; font-weight: 500;">${mensagem}</div>
+        <div style="font-size: 0.9rem; font-weight: 500;">${escapeHtml(mensagem)}</div>
     `;
     container.appendChild(toast);
 
@@ -219,14 +230,14 @@ function renderizarCatalogoGeral() {
             <div class="service-card">
                 <div>
                     <div class="service-card-top">
-                        <span class="service-badge">⏱ ${s.duracaoMinutos || 30} min</span>
+                        <span class="service-badge">⏱ ${Number(s.duracaoMinutos) || 30} min</span>
                         <span class="service-price">${formatadorMoeda.format(s.preco || 0)}</span>
                     </div>
-                    <h3 class="service-title">${s.nome}</h3>
-                    <p class="service-desc">${s.descricao || 'Atendimento com produtos selecionados e alto rigor estético.'}</p>
+                    <h3 class="service-title">${escapeHtml(s.nome)}</h3>
+                    <p class="service-desc">${escapeHtml(s.descricao || 'Atendimento com produtos selecionados e alto rigor estético.')}</p>
                 </div>
                 <div class="service-footer">
-                    <button type="button" class="btn btn-primary w-full" onclick="iniciarAgendamentoComServico(${s.id})">
+                    <button type="button" class="btn btn-primary w-full" onclick="iniciarAgendamentoComServico(${Number(s.id)})">
                         Agendar Este Serviço →
                     </button>
                 </div>
@@ -238,20 +249,21 @@ function renderizarCatalogoGeral() {
     const gridBarbeiros = document.getElementById('grid-barbeiros');
     if (gridBarbeiros) {
         gridBarbeiros.innerHTML = appState.barbeiros.map(b => {
-            const iniciais = b.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+            const iniciais = escapeHtml((b.nome || '').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase());
+            const primeiroNome = escapeHtml((b.nome || '').split(' ')[0]);
             return `
                 <div class="barber-card">
                     <div>
                         <div class="barber-avatar-box">${iniciais}</div>
-                        <h3 class="service-title">${b.nome}</h3>
+                        <h3 class="service-title">${escapeHtml(b.nome)}</h3>
                         <p class="service-desc" style="margin-bottom: 0.8rem;">
                             Especialista em visuais modernos, degradê navalhado e barba alinhada.
                         </p>
                         <span class="barber-status-badge">● Disponível para agendamento</span>
                     </div>
                     <div class="service-footer" style="margin-top: 1.5rem;">
-                        <button type="button" class="btn btn-ghost w-full" onclick="iniciarAgendamentoComBarbeiro(${b.id})">
-                            Agendar com ${b.nome.split(' ')[0]} →
+                        <button type="button" class="btn btn-ghost w-full" onclick="iniciarAgendamentoComBarbeiro(${Number(b.id)})">
+                            Agendar com ${primeiroNome} →
                         </button>
                     </div>
                 </div>
@@ -268,9 +280,9 @@ function renderizarPasso1Servicos() {
     container.innerHTML = appState.servicos.map(s => {
         const isSelected = appState.selecionado.servico?.id === s.id;
         return `
-            <div class="wizard-card-item ${isSelected ? 'selected' : ''}" onclick="selecionarServicoWizard(${s.id})">
-                <div class="item-name">${s.nome}</div>
-                <div class="item-info">⏱ ${s.duracaoMinutos || 30} minutos de atendimento</div>
+            <div class="wizard-card-item ${isSelected ? 'selected' : ''}" onclick="selecionarServicoWizard(${Number(s.id)})">
+                <div class="item-name">${escapeHtml(s.nome)}</div>
+                <div class="item-info">⏱ ${Number(s.duracaoMinutos) || 30} minutos de atendimento</div>
                 <div class="item-price">${formatadorMoeda.format(s.preco || 0)}</div>
             </div>
         `;
@@ -293,8 +305,8 @@ function renderizarPasso2Barbeiros() {
     appState.barbeiros.forEach(b => {
         const isSelected = appState.selecionado.barbeiro?.id === b.id;
         html += `
-            <div class="wizard-card-item ${isSelected ? 'selected' : ''}" onclick="selecionarBarbeiroWizard(${b.id})">
-                <div class="item-name">${b.nome}</div>
+            <div class="wizard-card-item ${isSelected ? 'selected' : ''}" onclick="selecionarBarbeiroWizard(${Number(b.id)})">
+                <div class="item-name">${escapeHtml(b.nome)}</div>
                 <div class="item-info">Barbeiro Profissional</div>
                 <span class="barber-status-badge">● Atendendo hoje</span>
             </div>
@@ -360,14 +372,14 @@ async function carregarSlotsDisponiveis() {
 
     // Renderiza cada horário em chips clicáveis
     container.innerHTML = slots.map(slotTime => {
-        // Formata "08:00:00" ou "08:00" para "08:00"
-        const horaCurta = slotTime.substring(0, 5);
+        // Formata "08:00:00" ou "08:00" para "08:00" e valida formato HH:mm
+        const horaCurta = String(slotTime).substring(0, 5).replace(/[^0-9:]/g, '');
         const isSelected = appState.selecionado.horario === horaCurta;
 
         return `
             <button type="button" class="slot-btn ${isSelected ? 'selected' : ''}" 
                     onclick="selecionarHorarioSlot('${horaCurta}')">
-                ${horaCurta}
+                ${escapeHtml(horaCurta)}
             </button>
         `;
     }).join('');
@@ -826,20 +838,20 @@ async function abrirModalMeusAgendamentos() {
             return `
                 <div class="appointment-item-card ${isCancelado ? 'cancelado' : ''}">
                     <div class="app-item-info">
-                        <h4>${a.servicoNome || 'Serviço Agendado'}</h4>
-                        <p>Barbeiro: ${a.barbeiroNome} • 📅 ${dataFormatada} às ${horaFormatada}h</p>
+                        <h4>${escapeHtml(a.servicoNome || 'Serviço Agendado')}</h4>
+                        <p>Barbeiro: ${escapeHtml(a.barbeiroNome)} • 📅 ${escapeHtml(dataFormatada)} às ${escapeHtml(horaFormatada)}h</p>
                     </div>
                     <div>
                         ${isCancelado 
                             ? '<span class="barber-status-badge" style="color: var(--danger); background: var(--danger-bg);">Cancelado</span>' 
-                            : `<button type="button" class="btn btn-outline-sm" onclick="cancelarAgendamentoModal(${a.id})" style="border-color: var(--danger); color: var(--danger);">Cancelar</button>`
+                            : `<button type="button" class="btn btn-outline-sm" onclick="cancelarAgendamentoModal(${Number(a.id)})" style="border-color: var(--danger); color: var(--danger);">Cancelar</button>`
                         }
                     </div>
                 </div>
             `;
         }).join('');
     } catch (err) {
-        container.innerHTML = `<p class="slots-empty-state" style="color: var(--danger);">${err.message}</p>`;
+        container.innerHTML = `<p class="slots-empty-state" style="color: var(--danger);">${escapeHtml(err.message)}</p>`;
     }
 }
 
@@ -858,6 +870,7 @@ window.cancelarAgendamentoModal = async function(id) {
 // PAINEL DINÂMICO DO GESTOR: RELATÓRIO DE PERÍODO, CAIXA, HISTÓRICO E COMISSÃO
 // =========================================================================
 let gestorEventosConfigurados = false;
+let filaConclusaoCache = [];
 
 function formatarIsoLocal(dateObj) {
     const y = dateObj.getFullYear();
@@ -952,22 +965,22 @@ function renderizarResumoBarbeirosPeriodo(lista) {
 
     container.innerHTML = lista.map(b => {
         const servicosTags = (b.servicos || []).map(s =>
-            `<span class="servico-pill">${s.servicoNome}: <strong>${s.quantidade}x</strong> (${formatadorMoeda.format(s.totalPago || 0)})</span>`
+            `<span class="servico-pill">${escapeHtml(s.servicoNome)}: <strong>${Number(s.quantidade)}x</strong> (${formatadorMoeda.format(s.totalPago || 0)})</span>`
         ).join(' ');
 
         const badgeStatus = b.barbeiroAtivo === false
             ? '<span class="barber-status-badge" style="color: var(--warning);">Histórico (Inativo/Removido)</span>'
-            : `<span class="barber-status-badge">Comissão padrão: ${b.percentualComissaoAtual ?? 50}%</span>`;
+            : `<span class="barber-status-badge">Comissão padrão: ${escapeHtml(b.percentualComissaoAtual ?? 50)}%</span>`;
 
         return `
             <div class="barbeiro-periodo-item">
                 <div class="bp-top">
                     <div>
-                        <h4>${b.barbeiroNome}</h4>
+                        <h4>${escapeHtml(b.barbeiroNome)}</h4>
                         ${badgeStatus}
                     </div>
                     <div class="bp-metrics">
-                        <span><strong>${b.totalAtendimentos}</strong> atend.</span>
+                        <span><strong>${Number(b.totalAtendimentos)}</strong> atend.</span>
                         <span>Caixa: <strong>${formatadorMoeda.format(b.totalPago || 0)}</strong></span>
                         <span>Comissão: <strong class="text-warning">${formatadorMoeda.format(b.totalComissao || 0)}</strong></span>
                     </div>
@@ -1006,14 +1019,14 @@ function popularSelectsGestor(todosBarbeiros, relatorio) {
     if (selCalc) {
         const valorAtual = selCalc.value;
         selCalc.innerHTML = '<option value="">Selecione um barbeiro...</option>' +
-            listaBarbeiros.map(b => `<option value="${b.id}" data-pct="${b.percentualComissao}">${b.nome} (${b.percentualComissao}%)</option>`).join('');
+            listaBarbeiros.map(b => `<option value="${Number(b.id)}" data-pct="${escapeHtml(b.percentualComissao)}">${escapeHtml(b.nome)} (${escapeHtml(b.percentualComissao)}%)</option>`).join('');
         if (valorAtual) selCalc.value = valorAtual;
     }
 
     if (selHistBarbeiro) {
         const valorAtual = selHistBarbeiro.value;
         selHistBarbeiro.innerHTML = '<option value="">Todos os barbeiros</option>' +
-            listaBarbeiros.map(b => `<option value="${b.id}">${b.nome}</option>`).join('');
+            listaBarbeiros.map(b => `<option value="${Number(b.id)}">${escapeHtml(b.nome)}</option>`).join('');
         if (valorAtual) selHistBarbeiro.value = valorAtual;
     }
 
@@ -1027,7 +1040,7 @@ function popularSelectsGestor(todosBarbeiros, relatorio) {
             }
         });
         selHistServico.innerHTML = '<option value="">Todos os serviços</option>' +
-            Array.from(mapaServicos.entries()).map(([id, nome]) => `<option value="${id}">${nome}</option>`).join('');
+            Array.from(mapaServicos.entries()).map(([id, nome]) => `<option value="${Number(id)}">${escapeHtml(nome)}</option>`).join('');
         if (valorAtual) selHistServico.value = valorAtual;
     }
 }
@@ -1054,24 +1067,24 @@ async function carregarTabelaHistorico() {
             const dt = new Date(h.dataHoraAtendimento);
             const dataStr = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             const clienteTag = h.clienteNaoUsuario
-                ? `${h.clienteNome || 'Cliente Avulso'} <small>(Avulso)</small>`
-                : (h.clienteNome || '--');
+                ? `${escapeHtml(h.clienteNome || 'Cliente Avulso')} <small>(Avulso)</small>`
+                : escapeHtml(h.clienteNome || '--');
 
             return `
                 <tr>
-                    <td>${dataStr}</td>
+                    <td>${escapeHtml(dataStr)}</td>
                     <td>${clienteTag}</td>
-                    <td><strong>${h.barbeiroNome}</strong></td>
-                    <td>${h.servicoNome}</td>
-                    <td><span class="servico-pill">${h.formaPagamento}</span></td>
+                    <td><strong>${escapeHtml(h.barbeiroNome)}</strong></td>
+                    <td>${escapeHtml(h.servicoNome)}</td>
+                    <td><span class="servico-pill">${escapeHtml(h.formaPagamento)}</span></td>
                     <td><strong>${formatadorMoeda.format(h.valorPago || 0)}</strong></td>
-                    <td>${h.percentualComissao}%</td>
+                    <td>${escapeHtml(h.percentualComissao)}%</td>
                     <td class="text-warning"><strong>${formatadorMoeda.format(h.valorComissao || 0)}</strong></td>
                 </tr>
             `;
         }).join('');
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="8" class="slots-empty-state" style="color: var(--danger);">${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="slots-empty-state" style="color: var(--danger);">${escapeHtml(err.message)}</td></tr>`;
     }
 }
 
@@ -1086,6 +1099,8 @@ async function carregarFilaConclusao() {
             : await api.minhaAgendaBarbeiro(0, 30);
 
         const pendentes = (lista || []).filter(a => a.status === 'AGENDADO');
+        filaConclusaoCache = pendentes;
+
         if (!pendentes.length) {
             container.innerHTML = '<p class="slots-empty-state">Não há agendamentos com status AGENDADO no momento.</p>';
             return;
@@ -1100,11 +1115,11 @@ async function carregarFilaConclusao() {
             return `
                 <div class="appointment-item-card">
                     <div class="app-item-info">
-                        <h4>#${a.id} • ${a.servicoNome || 'Atendimento'} — ${a.clienteNome || a.nomeNaoUsuario || 'Cliente'}</h4>
-                        <p>Barbeiro: <strong>${a.barbeiroNome}</strong> • 📅 ${dataStr} às ${horaStr}h • Valor ref.: ${formatadorMoeda.format(precoSugerido)}</p>
+                        <h4>#${Number(a.id)} • ${escapeHtml(a.servicoNome || 'Atendimento')} — ${escapeHtml(a.clienteNome || a.nomeNaoUsuario || 'Cliente')}</h4>
+                        <p>Barbeiro: <strong>${escapeHtml(a.barbeiroNome)}</strong> • 📅 ${escapeHtml(dataStr)} às ${escapeHtml(horaStr)}h • Valor ref.: ${formatadorMoeda.format(precoSugerido)}</p>
                     </div>
                     <div>
-                        <button type="button" class="btn btn-primary" onclick="abrirModalConcluir(${a.id}, ${precoSugerido}, '${(a.servicoNome || 'Atendimento').replace(/'/g, '')}', '${(a.barbeiroNome || '').replace(/'/g, '')}')">
+                        <button type="button" class="btn btn-primary" onclick="abrirModalConcluirPorId(${Number(a.id)})">
                             ✓ Concluir Atendimento
                         </button>
                     </div>
@@ -1112,15 +1127,17 @@ async function carregarFilaConclusao() {
             `;
         }).join('');
     } catch (err) {
-        container.innerHTML = `<p class="slots-empty-state" style="color: var(--danger);">${err.message}</p>`;
+        container.innerHTML = `<p class="slots-empty-state" style="color: var(--danger);">${escapeHtml(err.message)}</p>`;
     }
 }
 
-window.abrirModalConcluir = function(id, precoSugerido, servicoNome, barbeiroNome) {
-    document.getElementById('concluir-agendamento-id').value = id;
-    document.getElementById('concluir-valor-pago').value = Number(precoSugerido || 0).toFixed(2);
+window.abrirModalConcluirPorId = function(id) {
+    const item = filaConclusaoCache.find(a => Number(a.id) === Number(id));
+    if (!item) return;
+    document.getElementById('concluir-agendamento-id').value = item.id;
+    document.getElementById('concluir-valor-pago').value = Number(item.preco || 0).toFixed(2);
     document.getElementById('modal-concluir-resumo').textContent =
-        `Agendamento #${id} • ${servicoNome} (${barbeiroNome})`;
+        `Agendamento #${item.id} • ${item.servicoNome || 'Atendimento'} (${item.barbeiroNome || ''})`;
     document.getElementById('modal-concluir-atendimento').style.display = 'flex';
 };
 
@@ -1171,11 +1188,11 @@ function configurarEventosGestor() {
             box.style.display = 'block';
             box.innerHTML = `
                 <div class="calc-res-grid">
-                    <div><span>Profissional:</span> <strong>${res.barbeiroNome}</strong></div>
-                    <div><span>Atendimentos no período:</span> <strong>${res.totalAtendimentos}</strong></div>
+                    <div><span>Profissional:</span> <strong>${escapeHtml(res.barbeiroNome)}</strong></div>
+                    <div><span>Atendimentos no período:</span> <strong>${Number(res.totalAtendimentos)}</strong></div>
                     <div><span>Total faturado pelo barbeiro:</span> <strong>${formatadorMoeda.format(res.totalFaturado || 0)}</strong></div>
-                    <div><span>Porcentagem aplicada:</span> <strong>${res.percentualAplicado}%</strong> (cadastro atual: ${res.percentualCadastradoAtual}%)</div>
-                    <div><span>Comissão calculada (${res.percentualAplicado}%):</span> <strong class="text-warning">${formatadorMoeda.format(res.comissaoCalculada || 0)}</strong></div>
+                    <div><span>Porcentagem aplicada:</span> <strong>${escapeHtml(res.percentualAplicado)}%</strong> (cadastro atual: ${escapeHtml(res.percentualCadastradoAtual)}%)</div>
+                    <div><span>Comissão calculada (${escapeHtml(res.percentualAplicado)}%):</span> <strong class="text-warning">${formatadorMoeda.format(res.comissaoCalculada || 0)}</strong></div>
                     <div><span>Comissão gravada no histórico:</span> <strong>${formatadorMoeda.format(res.comissaoRegistradaNoHistorico || 0)}</strong></div>
                     <div><span>Saldo líquido da barbearia:</span> <strong class="text-success">${formatadorMoeda.format(res.liquidoBarbearia || 0)}</strong></div>
                 </div>
