@@ -1,7 +1,10 @@
 package dev.vitor.barbearia.ProjetoBarber.exceptions;
 
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -12,6 +15,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -54,6 +58,17 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ProblemDetail handleAuthenticationException(AuthenticationException ex) {
+        String msg = "Credenciais inválidas: verifique seu e-mail e senha.";
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, msg);
+        problem.setTitle("Falha na Autenticação");
+        problem.setType(URI.create("https://barber.dev/errors/authentication-failed"));
+        problem.setProperty("timestamp", Instant.now());
+        problem.setProperty("message", msg);
+        return problem;
+    }
+
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
     public ProblemDetail handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
         String msg = (ex.getMessage() != null && !ex.getMessage().equals("Access Denied"))
@@ -68,13 +83,22 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ProblemDetail handleGenericException(Exception ex) {
+    public ProblemDetail handleGenericException(Exception ex, HttpServletRequest request) {
+        log.error("[INTERNAL SERVER ERROR] Exceção não tratada em {} {}: {}",
+                request != null ? request.getMethod() : "UNKNOWN",
+                request != null ? request.getRequestURI() : "UNKNOWN",
+                ex.getMessage(), ex);
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR, "Ocorreu um erro interno inesperado no servidor.");
         problem.setTitle("Erro Interno no Servidor");
         problem.setType(URI.create("https://barber.dev/errors/internal-server-error"));
         problem.setProperty("timestamp", Instant.now());
         problem.setProperty("message", "Ocorreu um erro interno inesperado no servidor.");
+        String correlationId = org.slf4j.MDC.get(dev.vitor.barbearia.ProjetoBarber.config.CorrelationIdFilter.MDC_CORRELATION_ID_KEY);
+        if (correlationId != null) {
+            problem.setProperty("correlationId", correlationId);
+        }
         return problem;
     }
 }
+
